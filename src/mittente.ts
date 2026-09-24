@@ -32,11 +32,13 @@ export class FileMittente implements Mittente {
   }
 }
 
-/** Tiene i messaggi in memoria, per i test. */
+/** Tiene i messaggi in memoria, per i test; rifiuta quelli per le email in `rifiuta`, come farebbe un server SMTP. */
 export class FakeMittente implements Mittente {
   readonly inviati: Messaggio[] = [];
+  readonly rifiuta = new Set<string>();
 
   async invia(messaggio: Messaggio): Promise<void> {
+    if (this.rifiuta.has(messaggio.a)) throw new Error(`550 rifiutato: ${messaggio.a}`);
     this.inviati.push(messaggio);
   }
 }

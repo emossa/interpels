@@ -6,12 +6,16 @@ import type { Db } from '../db/index.ts';
 import type { Luoghi } from '../estrazione/luoghi.ts';
 import type { Fonte } from '../fonti.ts';
 import type { ClientHttp } from '../http.ts';
-import { FileMittente } from '../mittente.ts';
+import { FileMittente, type Mittente } from '../mittente.ts';
 import { raccogli } from '../raccolta.ts';
-import { giornoDiRoma, preparaRiepiloghi } from '../riepilogo/index.ts';
+import { giornoDiRoma, preparaRiepiloghi, type Preparazione } from '../riepilogo/index.ts';
+import { inviaRiepiloghi } from '../riepilogo/invia.ts';
 
 export const USO_JOB = `Uso:
   pnpm job [--solo-raccolta | --dry-run] [--fonte <id>]
+
+  Senza opzioni raccoglie e invia a ogni Destinatario il Riepilogo di oggi via Gmail
+  (GMAIL_UTENTE, GMAIL_APP_PASSWORD), al massimo uno al giorno.
 
   --solo-raccolta   legge le Fonti e salva Pubblicazioni e Interpelli, senza inviare Riepiloghi
   --dry-run         raccoglie e scrive i Riepiloghi in out/<giorno>/<destinatario>.html|.txt,
@@ -26,12 +30,14 @@ export type AmbienteJob = {
   configurazione: Configurazione;
   /** Dove `--dry-run` scrive i Riepiloghi (di solito `out/`), in una sottocartella per giorno. */
   cartellaUscita: string;
+  /** Il Mittente per l'invio vero; creato solo quando serve, così raccolta e prova non chiedono credenziali. */
+  creaMittente: () => Mittente;
   adesso: Date;
   scrivi: (testo: string) => void;
   scriviErrore: (testo: string) => void;
 };
 
-/** Esegue il job e restituisce il codice di uscita: 0 riuscito, 1 qualche Fonte fallita, 2 uso errato. */
+/** Esegue il job e restituisce il codice di uscita: 0 riuscito, 1 qualche Fonte o invio fallito, 2 uso errato. */
 export async function eseguiJob(argv: readonly string[], ambiente: AmbienteJob): Promise<number> {
   let opzioni: { 'solo-raccolta'?: boolean; 'dry-run'?: boolean; fonte?: string };
   try {
@@ -75,20 +81,47 @@ export async function eseguiJob(argv: readonly string[], ambiente: AmbienteJob):
   if (opzioni['dry-run']) {
     await provaRiepiloghi(ambiente, lette);
   } else if (!opzioni['solo-raccolta']) {
-    ambiente.scrivi("Invio dei Riepiloghi: non ancora disponibile, eseguita solo la raccolta.");
+    fallite += await inviaTutti(ambiente, lette);
   }
   return fallite > 0 ? 1 : 0;
 }
 
-/** `--dry-run`: i Riepiloghi di oggi su file, con `FileMittente`; non registra nulla in `riepilogo` né in `invio`. */
-async function provaRiepiloghi(ambiente: AmbienteJob, fontiLette: readonly string[]): Promise<void> {
+function preparazione(ambiente: AmbienteJob, fontiLette: readonly string[]): Preparazione {
   const nomiFonti = new Map(ambiente.fonti.map((f) => [f.id, f.nome]));
-  const pronti = await preparaRiepiloghi(ambiente.db, {
+  return {
     configurazione: ambiente.configurazione,
     nomiFonti,
     fontiLette: fontiLette.map((id) => nomiFonti.get(id) ?? id),
     adesso: ambiente.adesso,
-  });
+  };
+}
+
+/** L'invio vero; restituisce quanti Riepiloghi sono stati rifiutati (ritentati dal prossimo job). */
+async function inviaTutti(ambiente: AmbienteJob, fontiLette: readonly string[]): Promise<number> {
+  let mittente: Mittente;
+  try {
+    mittente = ambiente.creaMittente();
+  } catch (errore) {
+    ambiente.scriviErrore(`Invio: impossibile preparare il Mittente: ${(errore as Error).message}`);
+    return 1;
+  }
+  const esito = await inviaRiepiloghi(ambiente.db, mittente, preparazione(ambiente, fontiLette));
+  // I log di GitHub Actions di un repo pubblico sono pubblici: il Destinatario si nomina per id, mai per email.
+  for (const pronto of esito.inviati) ambiente.scrivi(`  Destinatario ${pronto.destinatarioId}: ${pronto.messaggio.oggetto}`);
+  for (const { pronto, errore } of esito.falliti) {
+    const senzaEmail = errore.replaceAll(pronto.messaggio.a, `<Destinatario ${pronto.destinatarioId}>`);
+    ambiente.scriviErrore(`  Destinatario ${pronto.destinatarioId}: invio fallito: ${senzaEmail}`);
+  }
+  const parti = [`${esito.inviati.length} ${esito.inviati.length === 1 ? 'Riepilogo inviato' : 'Riepiloghi inviati'}`];
+  if (esito.falliti.length > 0) parti.push(`${esito.falliti.length} ${esito.falliti.length === 1 ? 'fallito' : 'falliti'} (da ritentare)`);
+  if (esito.giaServiti > 0) parti.push(`${esito.giaServiti} già ${esito.giaServiti === 1 ? 'inviato' : 'inviati'} oggi`);
+  ambiente.scrivi(`Invio: ${parti.join(', ')}.`);
+  return esito.falliti.length;
+}
+
+/** `--dry-run`: i Riepiloghi di oggi su file, con `FileMittente`; non registra nulla in `riepilogo` né in `invio`. */
+async function provaRiepiloghi(ambiente: AmbienteJob, fontiLette: readonly string[]): Promise<void> {
+  const pronti = await preparaRiepiloghi(ambiente.db, preparazione(ambiente, fontiLette));
   const cartella = join(ambiente.cartellaUscita, giornoDiRoma(ambiente.adesso));
   const mittente = new FileMittente(cartella);
   for (const pronto of pronti) {

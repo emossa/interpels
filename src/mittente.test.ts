@@ -27,3 +27,10 @@ test('FakeMittente tiene i messaggi', async () => {
   await mittente.invia(messaggio);
   assert.deepEqual(mittente.inviati, [messaggio]);
 });
+
+test('FakeMittente rifiuta le email in rifiuta, senza tenerne il messaggio', async () => {
+  const mittente = new FakeMittente();
+  mittente.rifiuta.add(messaggio.a);
+  await assert.rejects(mittente.invia(messaggio), /550 rifiutato/);
+  assert.deepEqual(mittente.inviati, []);
+});

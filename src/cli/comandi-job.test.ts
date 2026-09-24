@@ -12,6 +12,7 @@ import { aggiungiDestinatario, disattivaDestinatario } from '../destinatari.ts';
 import { creaDbDiTest } from '../db/test-db.ts';
 import { caricaLuoghi } from '../estrazione/luoghi.ts';
 import { caricaFonti, type Fonte } from '../fonti.ts';
+import { FakeMittente } from '../mittente.ts';
 import { eseguiJob, type AmbienteJob } from './comandi-job.ts';
 
 const luoghi = caricaLuoghi();
@@ -41,6 +42,7 @@ async function ambienteDiTest(t: { after: (fn: () => Promise<void>) => void }) {
   t.after(async () => rmSync(cartellaUscita, { recursive: true, force: true }));
   const uscita: string[] = [];
   const errori: string[] = [];
+  const mittente = new FakeMittente();
   const ambiente: AmbienteJob = {
     db,
     fonti: [uspBariPost, rotta],
@@ -48,11 +50,12 @@ async function ambienteDiTest(t: { after: (fn: () => Promise<void>) => void }) {
     luoghi,
     configurazione,
     cartellaUscita,
+    creaMittente: () => mittente,
     adesso: new Date('2026-09-24T00:00:00Z'),
     scrivi: (testo) => uscita.push(testo),
     scriviErrore: (testo) => errori.push(testo),
   };
-  return { db, ambiente, uscita, errori, cartellaUscita };
+  return { db, ambiente, uscita, errori, cartellaUscita, mittente };
 }
 
 test('--solo-raccolta --fonte usp-bari-post salva Pubblicazioni e Interpelli; rieseguirlo non crea duplicati', async (t) => {
@@ -170,4 +173,116 @@ test('--solo-raccolta --fonte usp-bari-decreti, configurata solo in config/fonti
   assert.match(uscita[0]!, /^usp-bari-decreti: \d+ lette, 0 nuove, 0 aggiornate$/);
   assert.equal((await db.select().from(schema.pubblicazione)).length, 122);
   assert.equal((await db.select().from(schema.interpello)).length, 122);
+});
+
+test('senza opzioni invia il Riepilogo e lo registra; un secondo job lo stesso giorno non invia più nulla', async (t) => {
+  const { db, ambiente, uscita, errori, mittente } = await ambienteDiTest(t);
+  const primaria = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'primaria@example.org', { classi: ['ADEE'], province: ['BA'] });
+  // Nulla gli corrisponde: nessuna email per lui.
+  await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'secondaria@example.org', { classi: ['A011'], gruppi: ['Sostegno secondaria'], province: ['BR'] });
+
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.deepEqual(errori, []);
+  assert.deepEqual(mittente.inviati.map((m) => [m.a, m.oggetto]), [['primaria@example.org', 'Interpelli: 7 nuovi (ADEE) · 24 set 2026']]);
+  assert.equal(uscita.at(-1), 'Invio: 1 Riepilogo inviato.');
+  const riepiloghi = await db.select().from(schema.riepilogo);
+  assert.deepEqual(riepiloghi.map((r) => [r.destinatarioId, r.giorno]), [[primaria.id, '2026-09-24']]);
+  const invii = await db.select().from(schema.invio);
+  assert.equal(invii.length, 7);
+  assert.ok(invii.every((i) => i.destinatarioId === primaria.id && i.riepilogoId === riepiloghi[0]!.id));
+
+  // Il job di riserva, più tardi lo stesso giorno: nessun nuovo invio.
+  ambiente.adesso = new Date('2026-09-24T06:10:00Z');
+  uscita.length = 0;
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.equal(mittente.inviati.length, 1);
+  assert.equal(uscita.at(-1), 'Invio: 0 Riepiloghi inviati.');
+  assert.equal((await db.select().from(schema.riepilogo)).length, 1);
+  assert.equal((await db.select().from(schema.invio)).length, 7);
+});
+
+test('lo stesso giorno, chi ha già il Riepilogo non ne riceve un secondo anche se ci sono Interpelli nuovi', async (t) => {
+  const { db, ambiente, uscita, mittente } = await ambienteDiTest(t);
+  const primaria = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'primaria@example.org', { classi: ['ADEE'], province: ['BA'] });
+  // Un Riepilogo di stamattina che non conteneva nulla di quanto raccolto ora.
+  await db.insert(schema.riepilogo).values({ destinatarioId: primaria.id, giorno: '2026-09-24', inviatoIl: new Date('2026-09-24T04:40:00Z') });
+
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.deepEqual(mittente.inviati, []);
+  assert.equal(uscita.at(-1), 'Invio: 0 Riepiloghi inviati, 1 già inviato oggi.');
+  assert.deepEqual(await db.select().from(schema.invio), []);
+});
+
+test('un invio rifiutato non registra nulla per quel Destinatario, e il job successivo ritenta solo lui', async (t) => {
+  const { db, ambiente, uscita, errori, mittente } = await ambienteDiTest(t);
+  const uno = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'uno@example.org', { classi: ['ADEE'], province: ['BA'] });
+  const due = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'due@example.org', { classi: ['ADEE'], province: ['BA'] });
+  mittente.rifiuta.add('uno@example.org');
+
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 1);
+  // Nei log (pubblici su GitHub Actions) il Destinatario compare per id, mai per email.
+  assert.deepEqual(errori, [`  Destinatario ${uno.id}: invio fallito: 550 rifiutato: <Destinatario ${uno.id}>`]);
+  assert.ok(uscita.every((riga) => !riga.includes('@')));
+  assert.equal(uscita.at(-1), 'Invio: 1 Riepilogo inviato, 1 fallito (da ritentare).');
+  assert.deepEqual(mittente.inviati.map((m) => m.a), ['due@example.org']);
+  assert.deepEqual((await db.select().from(schema.riepilogo)).map((r) => r.destinatarioId), [due.id]);
+  assert.ok((await db.select().from(schema.invio)).every((i) => i.destinatarioId === due.id));
+
+  // Il job di riserva: SMTP ora accetta, parte solo il Riepilogo mancante.
+  mittente.rifiuta.clear();
+  errori.length = 0;
+  ambiente.adesso = new Date('2026-09-24T06:10:00Z');
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.deepEqual(errori, []);
+  assert.deepEqual(mittente.inviati.map((m) => m.a), ['due@example.org', 'uno@example.org']);
+  assert.equal(mittente.inviati[0]!.oggetto, mittente.inviati[1]!.oggetto);
+  assert.equal(uscita.at(-1), 'Invio: 1 Riepilogo inviato.');
+  assert.deepEqual((await db.select().from(schema.riepilogo)).map((r) => r.destinatarioId).sort(), [uno.id, due.id].sort());
+  assert.equal((await db.select().from(schema.invio)).length, 14);
+});
+
+test('i giorni senza Interpelli nuovi non inviano nulla', async (t) => {
+  const { db, ambiente, uscita, mittente } = await ambienteDiTest(t);
+  await destinatarioAggiuntoIl(db, '2026-10-10T08:00:00Z', 'tardi@example.org', { classi: ['ADEE'], province: ['BA'] });
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.deepEqual(mittente.inviati, []);
+  assert.equal(uscita.at(-1), 'Invio: 0 Riepiloghi inviati.');
+  assert.deepEqual(await db.select().from(schema.riepilogo), []);
+});
+
+test('un Interpello già in invio non si rinvia mai, neppure un altro giorno', async (t) => {
+  const { db, ambiente, mittente } = await ambienteDiTest(t);
+  const primaria = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'primaria@example.org', { classi: ['ADEE'], province: ['BA'] });
+  assert.equal(await eseguiJob(['--solo-raccolta', '--fonte', 'usp-bari-post'], ambiente), 0);
+  // Ieri gli è già stato inviato uno degli Interpelli ADEE.
+  const [ieri] = await db.insert(schema.riepilogo).values({ destinatarioId: primaria.id, giorno: '2026-09-23' }).returning();
+  const adee = (await db.select().from(schema.interpello)).filter((i) => i.classi.includes('ADEE') && i.provincia === 'BA');
+  const giaInviato = adee[0]!;
+  await db.insert(schema.invio).values({ destinatarioId: primaria.id, interpelloId: giaInviato.id, riepilogoId: ieri!.id });
+
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.equal(mittente.inviati.length, 1);
+  assert.match(mittente.inviati[0]!.oggetto, /^Interpelli: 6 nuovi \(ADEE\)/);
+  const invii = await db.select().from(schema.invio);
+  assert.equal(invii.filter((i) => i.interpelloId === giaInviato.id).length, 1);
+  assert.equal(invii.find((i) => i.interpelloId === giaInviato.id)!.riepilogoId, ieri!.id);
+
+  // Il giorno dopo, niente di nuovo: nessun Riepilogo, e nessun Interpello rinviato.
+  ambiente.adesso = new Date('2026-09-25T04:40:00Z');
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.equal(mittente.inviati.length, 1);
+});
+
+test('senza credenziali Gmail il job raccoglie, poi fallisce l\'invio con un messaggio chiaro', async (t) => {
+  const { db, ambiente, errori } = await ambienteDiTest(t);
+  ambiente.creaMittente = () => {
+    throw new Error('GMAIL_UTENTE non impostata: vedi .env.example');
+  };
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 1);
+  assert.deepEqual(errori, ['Invio: impossibile preparare il Mittente: GMAIL_UTENTE non impostata: vedi .env.example']);
+  assert.equal((await db.select().from(schema.pubblicazione)).length, 20);
+  // Raccolta e prova non chiedono il Mittente.
+  errori.length = 0;
+  assert.equal(await eseguiJob(['--dry-run', '--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.deepEqual(errori, []);
 });
