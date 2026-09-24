@@ -17,8 +17,14 @@ export type Luoghi = {
   sigle: ReadonlySet<string>;
 };
 
-/** Come è stata trovata la Provincia; il documento (più avanti) aggiungerà i suoi modi. */
-export type ProvinciaDa = 'sigla' | 'nome-iniziale' | 'nome-finale' | 'comune' | 'codice-meccanografico';
+/** Come è stata trovata la Provincia: dall'intestazione, oppure (`documento-…`) dalla carta intestata del documento. */
+export type ProvinciaDa =
+  | 'sigla'
+  | 'nome-iniziale'
+  | 'nome-finale'
+  | 'comune'
+  | 'codice-meccanografico'
+  | `documento-${'codice-meccanografico' | 'usp' | 'sigla' | 'nome-iniziale' | 'nome-finale' | 'comune'}`;
 
 const chiave = (testo: string) => piega(testo).split(/[^a-z]+/).filter(Boolean).join(' ');
 

@@ -286,3 +286,19 @@ test('senza credenziali Gmail il job raccoglie, poi fallisce l\'invio con un mes
   assert.equal(await eseguiJob(['--dry-run', '--fonte', 'usp-bari-post'], ambiente), 0);
   assert.deepEqual(errori, []);
 });
+
+test('--rileggi ricava di nuovo gli Interpelli salvati senza leggere le Fonti', async (t) => {
+  const { db, ambiente, uscita, errori } = await ambienteDiTest(t);
+  await eseguiJob(['--solo-raccolta', '--fonte', 'usp-bari-post'], ambiente);
+  await db.update(schema.interpello).set({ classi: [] });
+  uscita.length = 0;
+  const http = ambiente.http as ReturnType<typeof clientRegistrato>;
+  const richieste = http.richiesti.length;
+
+  assert.equal(await eseguiJob(['--rileggi'], ambiente), 0);
+  assert.deepEqual(uscita, ['Rilette 20 Pubblicazioni dal testo salvato.']);
+  assert.equal(http.richiesti.length, richieste);
+  assert.ok((await db.select().from(schema.interpello)).some((i) => i.classi.length > 0));
+  assert.equal(await eseguiJob(['--rileggi', '--fonte', 'usp-bari-post'], ambiente), 2);
+  assert.match(errori[0]!, /--rileggi non si combina/);
+});

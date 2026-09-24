@@ -6,6 +6,7 @@ Collects interpelli (schools' calls for substitute teachers) and emails each Des
 
 - Node 24 (TypeScript runs natively, no build step)
 - pnpm (`corepack enable`, or `npx pnpm@10`)
+- `pdftotext` from poppler (`brew install poppler`, `apt-get install poppler-utils`), used to read PDF documents and by the tests
 
 ```sh
 pnpm install
@@ -48,6 +49,7 @@ pnpm job --solo-raccolta                       # read every Fonte, store Pubblic
 pnpm job --solo-raccolta --fonte usp-bari-post # one Fonte only
 pnpm job --dry-run                             # collect, then write each Riepilogo to out/<giorno>/<email>.html|.txt
 pnpm job                                       # collect, then email each Riepilogo through Gmail
+pnpm job --rileggi                             # re-extract every stored Pubblicazione from stored text, no fetching
 ```
 
 Uses the `DATABASE_URL` in `.env` (or the environment). A Fonte's first run reads 30 days of history; later runs start 7 days before its latest stored Pubblicazione, so recent edits are picked up. Pubblicazioni are unique per (Fonte, `chiave`) — the post id for WordPress; for the Decreti page the document URL, or a hash of heading + data di pubblicazione when there is no link of its own: re-reading an edited one updates it and its Interpelli in place. A failing Fonte doesn't stop the others; the exit code is then 1.
@@ -55,3 +57,5 @@ Uses the `DATABASE_URL` in `.env` (or the environment). A Fonte's first run read
 `--dry-run` builds today's Riepiloghi (`src/riepilogo/`) and hands them to `FileMittente` (`src/mittente.ts`) instead of sending them; it records nothing in `riepilogo` or `invio`. A Destinatario gets the docente Interpelli matching one of their Classi (Gruppi expanded) and their Provincia, not yet in `invio` for them, first published at most 3 days before they were added; Da verificare items come last, marked with what's missing. Those with nothing new get no file. Plain `pnpm job` sends them through Gmail SMTP (`GmailMittente`, `src/mittente-gmail.ts`: `smtp.gmail.com:465`, one message per Destinatario, from `"Interpels" <GMAIL_UTENTE>`), with the App Password in `GMAIL_APP_PASSWORD`; both come only from the environment (`.env` locally, Actions secrets in the workflow). It is idempotent (`src/riepilogo/invia.ts`): at most one Riepilogo per Destinatario per day (Europe/Rome), none when nothing is new, and each Interpello at most once per Destinatario. The `riepilogo` row and its `invio` rows are written only after SMTP accepts the message, so a rejected send leaves nothing behind, makes the exit code 1, and the next run the same day retries only those Destinatari. After an intended rendering change, update the snapshots with `node --test --test-update-snapshots src/riepilogo/riepilogo.test.ts`.
 
 Extraction from the heading (Classi, Comune/Provincia via ISTAT, Scuola, Tipo, Personale, protocollo) lives in `src/estrazione/` and is shared by every Fonte. Its golden test runs over the committed corpus in `fixtures/estrazione/`; after an intended rule change, update the snapshot with `node --test --test-update-snapshots src/estrazione/golden.test.ts`. Adapter tests use recorded responses in `fixtures/<adapter>/` and never hit the network.
+
+Every document of every new Pubblicazione is fetched (one request at a time per host) and stored once per content hash in `documento`, with the text of page 1 and the Oggetto region (`pdftotext`); `documento_pubblicazione` links each Pubblicazione to its documents by URL, or records why one could not be fetched (retried on later reads). The first document that is a notice (its Oggetto names a call or supplenza; forms like *modello*, *domanda*, *allegato* are skipped) overrides the heading field by field, from its structured parts only: letterhead → Scuola, codice meccanografico, Comune, Provincia (codice, then `usp.xx@`, then the letterhead town); the "Prot." line before the Oggetto → protocollo; the Oggetto line → Classi, Tipo, Personale. Where heading and document disagree, the Interpello keeps internal `discordanze`; without a readable notice it keeps the heading alone and is marked `documento_non_letto`. Scanned PDFs, ZIPs and DOCX are fetched and hashed but not read yet. Sample PDFs for the tests are in `fixtures/documenti/`.

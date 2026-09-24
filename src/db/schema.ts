@@ -3,6 +3,7 @@
 import { sql } from 'drizzle-orm';
 import { boolean, check, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { DocumentoGrezzo } from '../adapter/adapter.ts';
+import type { Discordanza } from '../estrazione/documento.ts';
 import type { Personale, Tipo } from '../estrazione/intestazione.ts';
 import type { ProvinciaDa } from '../estrazione/luoghi.ts';
 
@@ -93,6 +94,12 @@ export const interpello = pgTable(
     ore: integer(),
     /** "fino al" come scritto (es. `30/06/2027`, "termine delle attività"). */
     finoAl: text('fino_al'),
+    /** L'hash del documento (l'avviso) da cui vengono i campi che vincono sull'intestazione. */
+    documento: text().references(() => documento.hash),
+    /** Nessun avviso letto (documento non scaricabile, illeggibile o assente): i campi vengono dalla sola intestazione. */
+    documentoNonLetto: boolean('documento_non_letto').notNull().default(false),
+    /** Dove intestazione e documento non concordano; interne, per la messa a punto, mai nel Riepilogo. */
+    discordanze: jsonb().$type<Discordanza[]>().notNull().default(sql`'[]'::jsonb`),
     creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
     aggiornatoIl: timestamp('aggiornato_il', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -150,4 +157,44 @@ export const invio = pgTable(
       .references(() => riepilogo.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.destinatarioId, t.interpelloId] })],
+);
+
+/**
+ * Un documento scaricato, salvato una volta sola per contenuto (hash): lo stesso file su più
+ * Pubblicazioni o Fonti è una riga sola. Il testo salvato permette di rileggere senza riscaricare.
+ */
+export const documento = pgTable('documento', {
+  /** SHA-256 del contenuto, in esadecimale. */
+  hash: text().primaryKey(),
+  /** Il content-type con cui è arrivato. */
+  tipo: text().notNull(),
+  dimensione: integer().notNull(),
+  /** Il testo della pagina 1; null se non si è potuto leggere. */
+  testo: text(),
+  /** La riga dell'Oggetto e le seguenti, anche se fuori dalla pagina 1. */
+  regioneOggetto: text('regione_oggetto'),
+  /** Perché il testo manca o è inservibile (scansione, formato non ancora letto…). */
+  errore: text(),
+  creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** I documenti di ogni Pubblicazione, per URL: il loro hash se scaricati, altrimenti perché no. */
+export const documentoPubblicazione = pgTable(
+  'documento_pubblicazione',
+  {
+    pubblicazioneId: integer('pubblicazione_id')
+      .notNull()
+      .references(() => pubblicazione.id, { onDelete: 'cascade' }),
+    url: text().notNull(),
+    /** L'ordine del documento nella Pubblicazione. */
+    posizione: integer().notNull(),
+    hash: text().references(() => documento.hash),
+    /** Perché non è stato scaricato; valorizzato se e solo se `hash` è nullo. */
+    errore: text(),
+    lettoIl: timestamp('letto_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.pubblicazioneId, t.url] }),
+    check('documento_pubblicazione_esito_coerente', sql`(${t.hash} is null) = (${t.errore} is not null)`),
+  ],
 );

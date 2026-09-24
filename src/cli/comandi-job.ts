@@ -7,12 +7,13 @@ import type { Luoghi } from '../estrazione/luoghi.ts';
 import type { Fonte } from '../fonti.ts';
 import type { ClientHttp } from '../http.ts';
 import { FileMittente, type Mittente } from '../mittente.ts';
-import { raccogli } from '../raccolta.ts';
+import { raccogli, rileggi } from '../raccolta.ts';
 import { giornoDiRoma, preparaRiepiloghi, type Preparazione } from '../riepilogo/index.ts';
 import { inviaRiepiloghi } from '../riepilogo/invia.ts';
 
 export const USO_JOB = `Uso:
   pnpm job [--solo-raccolta | --dry-run] [--fonte <id>]
+  pnpm job --rileggi
 
   Senza opzioni raccoglie e invia a ogni Destinatario il Riepilogo di oggi via Gmail
   (GMAIL_UTENTE, GMAIL_APP_PASSWORD), al massimo uno al giorno.
@@ -20,7 +21,8 @@ export const USO_JOB = `Uso:
   --solo-raccolta   legge le Fonti e salva Pubblicazioni e Interpelli, senza inviare Riepiloghi
   --dry-run         raccoglie e scrive i Riepiloghi in out/<giorno>/<destinatario>.html|.txt,
                     senza inviarli né registrarli
-  --fonte <id>      legge solo questa Fonte (vedi config/fonti.json)`;
+  --fonte <id>      legge solo questa Fonte (vedi config/fonti.json)
+  --rileggi         ricava di nuovo gli Interpelli dal testo salvato dei documenti, senza scaricare nulla`;
 
 export type AmbienteJob = {
   db: Db;
@@ -39,11 +41,16 @@ export type AmbienteJob = {
 
 /** Esegue il job e restituisce il codice di uscita: 0 riuscito, 1 qualche Fonte o invio fallito, 2 uso errato. */
 export async function eseguiJob(argv: readonly string[], ambiente: AmbienteJob): Promise<number> {
-  let opzioni: { 'solo-raccolta'?: boolean; 'dry-run'?: boolean; fonte?: string };
+  let opzioni: { 'solo-raccolta'?: boolean; 'dry-run'?: boolean; fonte?: string; rileggi?: boolean };
   try {
     opzioni = parseArgs({
       args: [...argv],
-      options: { 'solo-raccolta': { type: 'boolean' }, 'dry-run': { type: 'boolean' }, fonte: { type: 'string' } },
+      options: {
+        'solo-raccolta': { type: 'boolean' },
+        'dry-run': { type: 'boolean' },
+        fonte: { type: 'string' },
+        rileggi: { type: 'boolean' },
+      },
       allowPositionals: false,
     }).values;
   } catch (errore) {
@@ -53,6 +60,15 @@ export async function eseguiJob(argv: readonly string[], ambiente: AmbienteJob):
   if (opzioni['solo-raccolta'] && opzioni['dry-run']) {
     ambiente.scriviErrore(`--solo-raccolta e --dry-run non vanno insieme\n\n${USO_JOB}`);
     return 2;
+  }
+
+  if (opzioni.rileggi) {
+    if (opzioni.fonte !== undefined || opzioni['solo-raccolta'] || opzioni['dry-run']) {
+      ambiente.scriviErrore(`--rileggi non si combina con altre opzioni\n\n${USO_JOB}`);
+      return 2;
+    }
+    ambiente.scrivi(`Rilette ${await rileggi(ambiente.db, ambiente.luoghi)} Pubblicazioni dal testo salvato.`);
+    return 0;
   }
 
   let fonti = ambiente.fonti;
