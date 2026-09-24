@@ -82,9 +82,34 @@ test('una Fonte sconosciuta o un\'opzione errata sono errori di uso', async (t) 
   assert.match(errori[1]!, /Uso:/);
 });
 
-test('config/fonti.json configura la Fonte usp-bari-post con l\'adapter WordPress', () => {
-  const [fonte, ...altre] = caricaFonti();
-  assert.deepEqual(altre, []);
-  assert.equal(fonte!.id, 'usp-bari-post');
-  assert.equal(fonte!.adapter, 'wordpress');
+test('config/fonti.json configura le Fonti usp-bari-post (WordPress) e usp-bari-decreti (pagina Decreti)', () => {
+  const fonti = Object.fromEntries(caricaFonti().map((f) => [f.id, f.adapter]));
+  assert.equal(fonti['usp-bari-post'], 'wordpress');
+  assert.equal(fonti['usp-bari-decreti'], 'pagina-decreti');
+});
+
+test('--solo-raccolta --fonte usp-bari-decreti, configurata solo in config/fonti.json, salva Pubblicazioni e Interpelli senza duplicati', async (t) => {
+  const { db, ambiente, uscita, errori } = await ambienteDiTest(t);
+  // La Fonte come la carica il job; la pagina registrata ha 122 voci negli ultimi 30 giorni.
+  ambiente.fonti = caricaFonti();
+  ambiente.http = clientRegistrato(leggiRegistrazioni('pagina-decreti', 'usp-bari-decreti.json'));
+
+  assert.equal(await eseguiJob(['--solo-raccolta', '--fonte', 'usp-bari-decreti'], ambiente), 0);
+  assert.deepEqual(errori, []);
+  assert.deepEqual(uscita, ['usp-bari-decreti: 122 lette, 122 nuove, 0 aggiornate']);
+  const pubblicazioni = await db.select().from(schema.pubblicazione);
+  assert.equal(pubblicazioni.length, 122);
+  assert.ok(pubblicazioni.every((p) => p.fonte === 'usp-bari-decreti'));
+  const interpelli = await db.select().from(schema.interpello);
+  assert.equal(interpelli.length, 122);
+  // Interpelli da tutta Italia: la Provincia viene dall'intestazione, come per ogni Fonte.
+  assert.ok(interpelli.some((i) => i.provincia === 'BR'));
+  assert.ok(interpelli.some((i) => i.provincia === 'PZ'));
+
+  // Rileggere la stessa pagina non crea duplicati.
+  uscita.length = 0;
+  assert.equal(await eseguiJob(['--solo-raccolta', '--fonte', 'usp-bari-decreti'], ambiente), 0);
+  assert.match(uscita[0]!, /^usp-bari-decreti: \d+ lette, 0 nuove, 0 aggiornate$/);
+  assert.equal((await db.select().from(schema.pubblicazione)).length, 122);
+  assert.equal((await db.select().from(schema.interpello)).length, 122);
 });

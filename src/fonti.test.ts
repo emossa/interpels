@@ -26,6 +26,6 @@ test('rifiuta Fonti mal configurate dicendo quale e perché', () => {
   assert.throws(conFonti([{ ...valida, id: 'USP X' }]), /"id" fatto di minuscole/);
   assert.throws(conFonti([valida, valida]), /"usp-x" compare due volte/);
   assert.throws(conFonti([{ ...valida, nome: '' }]), /deve avere un "nome"/);
-  assert.throws(conFonti([{ ...valida, adapter: 'joomla' }]), /adapter sconosciuto \(disponibili: wordpress\)/);
+  assert.throws(conFonti([{ ...valida, adapter: 'joomla' }]), /adapter sconosciuto \(disponibili: wordpress, /);
   assert.throws(conFonti([{ ...valida, impostazioni: { api: 'https://x.it' } }]), /"usp-x": Impostazioni WordPress non valide: serve "cerca" o "categorie"/);
 });

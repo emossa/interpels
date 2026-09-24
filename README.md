@@ -16,7 +16,7 @@ pnpm test        # node:test; database tests run on PGlite with the real migrati
 ## Configuration
 
 - `config/classi.json` — Classi di concorso: normalised code → name. An unknown code is rejected, so add missing ones here.
-- `config/fonti.json` — Fonti: `id`, `nome`, `adapter` (a module in `src/adapter/`, e.g. `wordpress`) and its `impostazioni`. A Fonte says nothing about where its schools are.
+- `config/fonti.json` — Fonti: `id`, `nome`, `adapter` (a module in `src/adapter/`: `wordpress` for WordPress posts, `pagina-decreti` for the USP Bari Decreti page) and its `impostazioni`. A Fonte says nothing about where its schools are.
 - `config/gruppi.json` — Gruppi di classi: name → Classi (e.g. *Sostegno secondaria* = ADMM + ADSS).
 - `data/comuni.csv` — the ISTAT list of comuni; `data/province.csv` — the Province (sigla, name, region) derived from it.
 
@@ -48,6 +48,6 @@ pnpm job --solo-raccolta                       # read every Fonte, store Pubblic
 pnpm job --solo-raccolta --fonte usp-bari-post # one Fonte only
 ```
 
-Uses the `DATABASE_URL` in `.env` (or the environment). A Fonte's first run reads 30 days of history; later runs start 7 days before its latest stored Pubblicazione, so recent edits are picked up. Pubblicazioni are unique per (Fonte, `chiave`): re-reading an edited one updates it and its Interpelli in place. A failing Fonte doesn't stop the others; the exit code is then 1. Sending Riepiloghi is not built yet.
+Uses the `DATABASE_URL` in `.env` (or the environment). A Fonte's first run reads 30 days of history; later runs start 7 days before its latest stored Pubblicazione, so recent edits are picked up. Pubblicazioni are unique per (Fonte, `chiave`) — the post id for WordPress; for the Decreti page the document URL, or a hash of heading + data di pubblicazione when there is no link of its own: re-reading an edited one updates it and its Interpelli in place. A failing Fonte doesn't stop the others; the exit code is then 1. Sending Riepiloghi is not built yet.
 
 Extraction from the heading (Classi, Comune/Provincia via ISTAT, Scuola, Tipo, Personale, protocollo) lives in `src/estrazione/` and is shared by every Fonte. Its golden test runs over the committed corpus in `fixtures/estrazione/`; after an intended rule change, update the snapshot with `node --test --test-update-snapshots src/estrazione/golden.test.ts`. Adapter tests use recorded responses in `fixtures/<adapter>/` and never hit the network.

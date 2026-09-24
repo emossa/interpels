@@ -7,5 +7,13 @@
       "api": "https://www.uspbari.it/usp/wp-json/wp/v2/posts",
       "cerca": "interpell"
     }
+  },
+  {
+    "id": "usp-bari-decreti",
+    "nome": "USP Bari – Decreti",
+    "adapter": "pagina-decreti",
+    "impostazioni": {
+      "pagina": "https://www.uspbari.it/usp/pubblicazione-decreti-e-sentenze"
+    }
   }
 ]
