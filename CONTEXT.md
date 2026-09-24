@@ -21,7 +21,7 @@ Who an Interpello is for: *docente*, *ATA/DSGA* or *altro* (PNRR experts, tutors
 _Avoid_: staff, role, profile
 
 **Pubblicazione**:
-One appearance of an Interpello on a Fonte: its URL, data di pubblicazione and raw heading as that Fonte shows them.
+One item on a Fonte: its URL, data di pubblicazione, raw heading and attached documents as that Fonte shows them. Usually announces one Interpello; a bundle announces several, one per attached notice. Where heading and document disagree, the document wins.
 _Avoid_: posting, entry, item, post, listing
 
 **Possibile duplicato**:
@@ -71,5 +71,5 @@ The Classi di concorso and/or Gruppi di classi, and the Province, a Destinatario
 _Avoid_: filters, subscription, settings
 
 **Riepilogo**:
-The daily email to one Destinatario listing the Interpelli that matched since their previous Riepilogo.
+The daily email to one Destinatario listing the matching Interpelli not yet sent to them; at most one per day, none when nothing matches. An Interpello is sent to a Destinatario at most once.
 _Avoid_: digest, summary, newsletter, report
