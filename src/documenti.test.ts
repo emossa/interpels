@@ -20,15 +20,16 @@ test('un PDF con testo: hash del contenuto, testo della pagina 1 e regione dell\
   assert.match(letto.regioneOggetto!, /^OGGETTO: Interpello per supplenza su classe di concorso ADEE/);
 });
 
-test("l'Oggetto oltre la pagina 1 si cerca nelle pagine seguenti", async () => {
+test("l'Oggetto oltre la pagina 1 si cerca nelle pagine seguenti, che si salvano (fino alla 5) per la scadenza", async () => {
   const pagine: string[] = [];
-  const leggiPdf: LeggiPdf = async (_, { dalla }) => {
-    pagine.push(String(dalla));
+  const leggiPdf: LeggiPdf = async (_, { dalla, alla }) => {
+    pagine.push(`${dalla}-${alla}`);
     return dalla === 1 ? 'ISTITUTO COMPRENSIVO "ROSSI"\n'.repeat(5) : 'OGGETTO: Interpello A022\nIL DIRIGENTE';
   };
   const letto = await leggiDocumento(pdf, 'application/pdf', { pdf: leggiPdf });
-  assert.deepEqual(pagine, ['1', '2']);
+  assert.deepEqual(pagine, ['1-1', '2-5']);
   assert.equal(letto.regioneOggetto, 'OGGETTO: Interpello A022\nIL DIRIGENTE');
+  assert.equal(letto.testoSeguente, 'OGGETTO: Interpello A022\nIL DIRIGENTE');
 });
 
 test("una scansione si legge con l'OCR in italiano", async () => {

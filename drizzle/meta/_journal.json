@@ -57,6 +57,13 @@
       "when": 1790251843096,
       "tag": "0007_riepilogo_per_provincia",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790253770335,
+      "tag": "0008_scadenza",
+      "breakpoints": true
     }
   ]
 }

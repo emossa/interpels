@@ -79,6 +79,8 @@ export type DocumentoSalvato = {
   hash: string | null;
   testo: string | null;
   regioneOggetto: string | null;
+  /** Il testo delle pagine dopo la prima; null se non letto. */
+  testoSeguente?: string | null;
   /** Perché, scaricato, non si è potuto leggere. */
   errore?: string | null;
 };
@@ -105,7 +107,7 @@ export function interpelliDaPubblicazione(
   documenti: readonly DocumentoSalvato[] = [],
 ): InterpelloEstratto[] {
   const intestazione = estraiDaIntestazione(
-    { intestazione: grezza.intestazione, etichetteDocumenti: grezza.documenti.map((d) => d.etichetta) },
+    { intestazione: grezza.intestazione, etichetteDocumenti: grezza.documenti.map((d) => d.etichetta), pubblicataIl: grezza.pubblicataIl },
     luoghi,
   );
   const avvisi: InterpelloEstratto[] = [];
@@ -117,7 +119,7 @@ export function interpelliDaPubblicazione(
   for (const d of documenti) {
     if (!d.hash || !d.testo || visti.has(d.hash)) continue;
     visti.add(d.hash);
-    const dalDocumento = estraiDaDocumento({ testo: d.testo, regioneOggetto: d.regioneOggetto }, luoghi);
+    const dalDocumento = estraiDaDocumento({ testo: d.testo, regioneOggetto: d.regioneOggetto, testoSeguente: d.testoSeguente }, luoghi, grezza.pubblicataIl);
     if (!eAvviso(dalDocumento.oggetto, `${d.url} ${d.etichetta}`)) continue;
     const { dati, discordanze } = unisci(intestazione, dalDocumento);
     const regione = (d.regioneOggetto ?? trovaRegioneOggetto(d.testo) ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -181,11 +183,16 @@ export async function salvaPubblicazione(
   const giaScaricati = new Set<string>();
   if (esistente) {
     const righe = await db
-      .select({ url: schema.documentoPubblicazione.url, errore: schema.documento.errore })
+      .select({ url: schema.documentoPubblicazione.url, errore: schema.documento.errore, testo: schema.documento.testo, testoSeguente: schema.documento.testoSeguente })
       .from(schema.documentoPubblicazione)
       .innerJoin(schema.documento, eq(schema.documento.hash, schema.documentoPubblicazione.hash))
       .where(and(eq(schema.documentoPubblicazione.pubblicazioneId, esistente.id), isNotNull(schema.documentoPubblicazione.hash)));
-    for (const { url, errore } of righe) if (!errore || !LETTO_CON_REGOLE_VECCHIE.test(errore)) giaScaricati.add(url);
+    for (const { url, errore, testo, testoSeguente } of righe) {
+      if (errore && LETTO_CON_REGOLE_VECCHIE.test(errore)) continue;
+      // Letto prima che si salvassero le pagine seguenti: si riscarica, per la scadenza.
+      if (testo !== null && testoSeguente === null) continue;
+      giaScaricati.add(url);
+    }
   }
   const letture: Lettura[] = [];
   if (lettura) {
@@ -251,8 +258,11 @@ async function salvaDocumenti(tx: Tx, pubblicazioneId: number, grezza: Pubblicaz
  * salvato prende la lettura nuova: lo stesso contenuto, letto con le regole di oggi.
  */
 async function salvaDocumento(tx: Tx, { parti, ...letto }: DocumentoLetto) {
-  const { testo, regioneOggetto, errore } = letto;
-  await tx.insert(schema.documento).values(letto).onConflictDoUpdate({ target: schema.documento.hash, set: { testo, regioneOggetto, errore } });
+  const { testo, regioneOggetto, testoSeguente, errore } = letto;
+  await tx
+    .insert(schema.documento)
+    .values(letto)
+    .onConflictDoUpdate({ target: schema.documento.hash, set: { testo, regioneOggetto, testoSeguente, errore } });
   for (const [posizione, { nome, letto: parte }] of (parti ?? []).entries()) {
     await salvaDocumento(tx, parte);
     await tx
@@ -271,6 +281,7 @@ async function documentiSalvati(tx: Tx, pubblicazioneId: number, grezza: Pubblic
       hash: schema.documentoPubblicazione.hash,
       testo: schema.documento.testo,
       regioneOggetto: schema.documento.regioneOggetto,
+      testoSeguente: schema.documento.testoSeguente,
       errore: schema.documento.errore,
     })
     .from(schema.documentoPubblicazione)
@@ -289,6 +300,7 @@ async function documentiSalvati(tx: Tx, pubblicazioneId: number, grezza: Pubblic
             hash: schema.documento.hash,
             testo: schema.documento.testo,
             regioneOggetto: schema.documento.regioneOggetto,
+            testoSeguente: schema.documento.testoSeguente,
             errore: schema.documento.errore,
           })
           .from(schema.documentoParte)

@@ -34,6 +34,8 @@ test('carta intestata, Prot. e Oggetto di un avviso (I.C. De Gasperi-Pende, Noic
     // "Prot. 0008494/U del 24/09/2026": senza gli zeri iniziali, come nelle intestazioni.
     protocollo: '8494',
     dataProtocollo: '24/09/2026',
+    // Senza la data di pubblicazione la scadenza non si cerca.
+    scadenza: null,
   });
 });
 

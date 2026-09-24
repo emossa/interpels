@@ -88,6 +88,9 @@ test('senza --fonte legge tutte le Fonti; una che fallisce dà codice 1 ma non f
   assert.equal((await db.select().from(schema.pubblicazione)).length, 20);
 });
 
+/** Preferenze a cui nulla di quanto registrato corrisponde (nel registrato non c'è sostegno secondaria né A011 a Brindisi). */
+const NIENTE_IN_CORSO = { classi: ['A011'], gruppi: ['Sostegno secondaria'], province: ['BR'] };
+
 /** Aggiunge un Destinatario come se fosse stato aggiunto in quel momento. */
 async function destinatarioAggiuntoIl(db: Db, creatoIl: string, email: string, preferenze: { classi?: string[]; gruppi?: string[]; province: string[] }) {
   const d = await aggiungiDestinatario(db, configurazione, { email, preferenze: { classi: [], gruppi: [], ...preferenze } });
@@ -112,9 +115,9 @@ test('--dry-run scrive HTML e testo per chi ha Interpelli nuovi, niente per gli 
   const testo = readFileSync(join(cartella, 'primaria@example.org.txt'), 'utf8');
   const html = readFileSync(join(cartella, 'primaria@example.org.html'), 'utf8');
   assert.match(testo, /^Oggetto: Interpelli: 7 nuovi \(ADEE\) · 24 set 2026\n/);
-  // Sei ADEE dal 17/09 in poi (3 giorni prima dell'aggiunta), e l'avviso senza Classe da verificare in fondo.
+  // Al primo Riepilogo: i sei ADEE senza scadenza nota dell'ultima settimana, e l'avviso senza Classe da verificare in fondo.
   assert.equal(testo.match(/^• /gm)?.length, 7);
-  assert.match(testo, /── Da verificare ─+\n\n• [^\n]+\n  ⚠ classe di concorso non specificata\n/);
+  assert.match(testo, /── Da verificare ─+\n\n• [^\n]+\n  scadenza non indicata\n  ⚠ classe di concorso non specificata\n/);
   assert.doesNotMatch(testo, /Palo del Colle/); // ADAA non voluta, ADEE del 16/09 troppo vecchia
   assert.match(testo, /Fonti lette: USP Bari$/m);
   assert.match(html, /^<!doctype html>/);
@@ -155,8 +158,8 @@ test('--dry-run scrive una coppia di file per ogni Riepilogo di Provincia', asyn
 
 test('--dry-run senza Interpelli nuovi non scrive file', async (t) => {
   const { db, ambiente, uscita, cartellaUscita } = await ambienteDiTest(t);
-  // Aggiunto molto dopo le Pubblicazioni registrate: il limite dei 3 giorni le esclude tutte.
-  await destinatarioAggiuntoIl(db, '2026-10-10T08:00:00Z', 'tardi@example.org', { classi: ['ADEE'], province: ['BA'] });
+  // Nulla di quanto registrato gli corrisponde.
+  await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'nessuno@example.org', NIENTE_IN_CORSO);
   assert.equal(await eseguiJob(['--dry-run', '--fonte', 'usp-bari-post'], ambiente), 0);
   assert.equal(existsSync(join(cartellaUscita, '2026-09-24')), false);
   assert.equal(uscita.at(-1), 'Prova: nessun Riepilogo, nessun Destinatario ha Interpelli nuovi.');
@@ -272,7 +275,7 @@ test('un invio rifiutato non registra nulla per quel Destinatario, e il job succ
 
 test('i giorni senza Interpelli nuovi non inviano nulla', async (t) => {
   const { db, ambiente, uscita, mittente } = await ambienteDiTest(t);
-  await destinatarioAggiuntoIl(db, '2026-10-10T08:00:00Z', 'tardi@example.org', { classi: ['ADEE'], province: ['BA'] });
+  await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'nessuno@example.org', NIENTE_IN_CORSO);
   assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
   assert.deepEqual(mittente.inviati, []);
   assert.equal(uscita.at(-1), 'Invio: 0 Riepiloghi inviati.');
@@ -300,6 +303,47 @@ test('un Interpello già in invio non si rinvia mai, neppure un altro giorno', a
   ambiente.adesso = new Date('2026-09-25T04:40:00Z');
   assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
   assert.equal(mittente.inviati.length, 1);
+});
+
+test('il primo Riepilogo di un nuovo Destinatario porta ogni Interpello ancora aperto; poi tutto come prima', async (t) => {
+  const { db, ambiente, mittente, uscita } = await ambienteDiTest(t);
+  assert.equal(await eseguiJob(['--solo-raccolta', '--fonte', 'usp-bari-post'], ambiente), 0);
+  const adee = (
+    await db
+      .select({ id: schema.interpello.id, classi: schema.interpello.classi, provincia: schema.interpello.provincia, pubblicataIl: schema.pubblicazione.pubblicataIl })
+      .from(schema.interpello)
+      .innerJoin(schema.pubblicazioneInterpello, eq(schema.pubblicazioneInterpello.interpelloId, schema.interpello.id))
+      .innerJoin(schema.pubblicazione, eq(schema.pubblicazione.id, schema.pubblicazioneInterpello.pubblicazioneId))
+      .orderBy(schema.pubblicazione.pubblicataIl)
+  ).filter((i) => i.classi.includes('ADEE') && i.provincia === 'BA');
+  const settimanaFa = ambiente.adesso.getTime() - 7 * 24 * 60 * 60 * 1000;
+  // Il più vecchio, di oltre una settimana fa, scade il 30/09: è ancora aperto. Uno recente è già scaduto.
+  const [vecchio, ...recenti] = adee;
+  assert.ok(vecchio!.pubblicataIl.getTime() < settimanaFa);
+  const scaduto = recenti.at(-1)!;
+  await db.update(schema.interpello).set({ scadenza: new Date('2026-09-30T10:00:00Z') }).where(eq(schema.interpello.id, vecchio!.id));
+  await db.update(schema.interpello).set({ scadenza: new Date('2026-09-23T10:00:00Z') }).where(eq(schema.interpello.id, scaduto.id));
+
+  // Aggiunto oggi: il limite dei 3 giorni avrebbe escluso il più vecchio.
+  const nuovo = await destinatarioAggiuntoIl(db, '2026-09-24T00:00:00Z', 'nuovo@example.org', { classi: ['ADEE'], province: ['BA'] });
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.equal(mittente.inviati.length, 1);
+  const inviati = new Set((await db.select().from(schema.invio)).map((i) => i.interpelloId));
+  assert.ok(inviati.has(vecchio!.id));
+  assert.ok(!inviati.has(scaduto.id));
+  // Senza scadenza: quelli dell'ultima settimana, segnati.
+  for (const r of recenti.filter((r) => r !== scaduto)) assert.equal(inviati.has(r.id), r.pubblicataIl.getTime() >= settimanaFa);
+  assert.match(mittente.inviati[0]!.testo, /ADEE · scade il 30\/09 alle 12:00 /);
+  assert.match(mittente.inviati[0]!.testo, /ADEE · scadenza non indicata\n/);
+  assert.deepEqual((await db.select().from(schema.riepilogo)).map((r) => r.destinatarioId), [nuovo.id]);
+
+  // Un secondo job lo stesso giorno non invia nulla; il giorno dopo, senza nulla di nuovo, nemmeno.
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], { ...ambiente, adesso: new Date('2026-09-24T06:10:00Z') }), 0);
+  assert.equal(await eseguiJob(['--fonte', 'usp-bari-post'], { ...ambiente, adesso: new Date('2026-09-25T04:40:00Z') }), 0);
+  assert.equal(mittente.inviati.length, 1);
+  assert.equal(uscita.at(-1), 'Invio: 0 Riepiloghi inviati.');
+  // Lo scaduto non arriva mai, neppure nei giorni seguenti.
+  assert.ok(!(await db.select().from(schema.invio)).some((i) => i.interpelloId === scaduto.id));
 });
 
 test('senza credenziali Gmail il job raccoglie, poi fallisce l\'invio con un messaggio chiaro', async (t) => {
@@ -356,7 +400,7 @@ test('una Fonte che fallisce non ferma i Riepiloghi: il riquadro è in cima, e i
 test('le email di solo Avviso partono quando il problema comincia, ogni 3 giorni e alla ripresa; mai due lo stesso giorno', async (t) => {
   const { db, ambiente, uscita, mittente } = await ambienteDiTest(t);
   // Nessun Interpello gli corrisponde mai: riceve solo Avvisi.
-  const tardi = await destinatarioAggiuntoIl(db, '2026-10-10T08:00:00Z', 'tardi@example.org', { classi: ['ADEE'], province: ['BA'] });
+  const nessuno = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'nessuno@example.org', NIENTE_IN_CORSO);
   let giu = true;
   const intermittente: Fonte = {
     id: 'rotta',
@@ -382,7 +426,7 @@ test('le email di solo Avviso partono quando il problema comincia, ogni 3 giorni
   // Il problema comincia: un'email di solo Avviso, e il job esce con 1.
   let { codice, nuovi } = await esegui(giorno(0, '00:00')); // l'ora delle risposte registrate
   assert.equal(codice, 1);
-  assert.deepEqual(nuovi.map((m) => [m.a, m.oggetto]), [['tardi@example.org', 'Interpelli: avviso sulle fonti · 24 set 2026']]);
+  assert.deepEqual(nuovi.map((m) => [m.a, m.oggetto]), [['nessuno@example.org', 'Interpelli: avviso sulle fonti · 24 set 2026']]);
   assert.equal(
     nuovi[0]!.testo.split('\n—\n')[0],
     '⚠ Rotta non consultabile da oggi: eventuali interpelli da questa fonte arriveranno appena torna disponibile.\n\nOggi nessun interpello nuovo per le tue preferenze.\n',
@@ -390,7 +434,7 @@ test('le email di solo Avviso partono quando il problema comincia, ogni 3 giorni
   assert.match(nuovi[0]!.html, /non consultabile da oggi/);
   assert.equal(uscita.at(-1), 'Avvisi: 1 email di solo avviso inviata.');
   assert.ok(uscita.every((riga) => !riga.includes('@')));
-  assert.deepEqual((await db.select().from(schema.avviso)).map((a) => [a.destinatarioId, a.giorno]), [[tardi.id, '2026-09-24']]);
+  assert.deepEqual((await db.select().from(schema.avviso)).map((a) => [a.destinatarioId, a.giorno]), [[nessuno.id, '2026-09-24']]);
 
   // Il job di riserva lo stesso giorno: niente doppione.
   ({ codice, nuovi } = await esegui(giorno(0, '06:10')));
@@ -417,9 +461,9 @@ test('le email di solo Avviso partono quando il problema comincia, ogni 3 giorni
 
 test('--dry-run scrive anche le email di solo Avviso, senza segnarle come annunciate', async (t) => {
   const { db, ambiente, uscita, cartellaUscita, mittente } = await ambienteDiTest(t);
-  await destinatarioAggiuntoIl(db, '2026-10-10T08:00:00Z', 'tardi@example.org', { classi: ['ADEE'], province: ['BA'] });
+  await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'nessuno@example.org', NIENTE_IN_CORSO);
   assert.equal(await eseguiJob(['--dry-run'], ambiente), 1);
-  assert.deepEqual(readdirSync(join(cartellaUscita, '2026-09-24')).sort(), ['tardi@example.org.html', 'tardi@example.org.txt']);
+  assert.deepEqual(readdirSync(join(cartellaUscita, '2026-09-24')).sort(), ['nessuno@example.org.html', 'nessuno@example.org.txt']);
   assert.match(uscita.at(-1)!, /^Prova: 1 email di solo avviso scritta in /);
   assert.deepEqual(await db.select().from(schema.avviso), []);
   const [stato] = await db.select().from(schema.statoFonte).where(eq(schema.statoFonte.fonte, 'rotta'));

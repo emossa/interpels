@@ -16,6 +16,10 @@ _Avoid_: entry, item, announcement, post, avviso
 What an Interpello announces: *interpello* (a new call), *annullamento*, *rettifica*, *riapertura* (extension or reopening) or *esito* (outcome).
 _Avoid_: kind, type, category
 
+**Scadenza**:
+When applications for an Interpello close, as its notice states it ("entro le ore 12:00 del 25/09/2026"); the end of that day when no time is given. An Interpello is *aperto* while its Scadenza is in the future, or, without one, for 7 days after it was first published.
+_Avoid_: deadline, termine, expiry
+
 **Personale**:
 Who an Interpello is for: *docente*, *ATA/DSGA* or *altro* (PNRR experts, tutors…). Only *docente* reaches a Riepilogo.
 _Avoid_: staff, role, profile
@@ -71,7 +75,7 @@ The Classi di concorso and/or Gruppi di classi, and the Province, a Destinatario
 _Avoid_: filters, subscription, settings
 
 **Riepilogo**:
-The daily email to one Destinatario listing the matching Interpelli not yet sent to them; at most one per day, none when nothing matches. A Destinatario may opt in to one Riepilogo per Provincia instead, each naming its Provincia, with Interpelli lacking a Provincia in every one. An Interpello is sent to a Destinatario at most once.
+The daily email to one Destinatario listing the matching Interpelli not yet sent to them; at most one per day, none when nothing matches. A Destinatario may opt in to one Riepilogo per Provincia instead, each naming its Provincia, with Interpelli lacking a Provincia in every one. An Interpello is sent to a Destinatario at most once. A Destinatario's first Riepilogo carries every matching Interpello still aperto (see Scadenza).
 _Avoid_: digest, summary, newsletter, report
 
 **Avviso**:

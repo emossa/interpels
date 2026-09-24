@@ -1,4 +1,5 @@
 // Il Riepilogo come email: oggetto, HTML semplice con stili in linea e testo semplice. In italiano.
+import { senzaOra } from '../estrazione/scadenza.ts';
 import type { Avviso } from '../stato-fonti.ts';
 import { classiDelRiepilogo, totale, type ContenutoRiepilogo, type Voce } from './componi.ts';
 
@@ -69,15 +70,23 @@ function dettagli(voce: Voce): string[] {
   const parti: string[] = [];
   if (voce.classi.length > 0) parti.push(voce.classi.join(', '));
   if (voce.ore !== null) parti.push(`${voce.ore} ore`);
-  if (voce.scadenza) {
-    const { ora, minuti } = aRoma(voce.scadenza);
-    parti.push(`scadenza ${giornoBreve(voce.scadenza)} ore ${ora}:${minuti}`);
-  }
+  const scadenza = testoScadenza(voce);
+  if (scadenza) parti.push(scadenza);
   if (voce.finoAl) parti.push(`fino al ${voce.finoAl}`);
   return parti;
 }
 
-type Collegamento = { etichetta: string; url: string };
+/** "scade il 25/09 alle 12:00", "scade il 25/09" senza ora, o "scadenza non indicata" (non per annullamenti ed esiti). */
+function testoScadenza(voce: Voce): string | null {
+  if (voce.scadenza) {
+    if (senzaOra(voce.scadenza)) return `scade il ${giornoBreve(voce.scadenza)}`;
+    const { ora, minuti } = aRoma(voce.scadenza);
+    return `scade il ${giornoBreve(voce.scadenza)} alle ${ora}:${minuti}`;
+  }
+  return voce.tipo === 'annullamento' || voce.tipo === 'esito' ? null : 'scadenza non indicata';
+}
+
+type Collegamento ={ etichetta: string; url: string };
 
 function collegamenti(voce: Voce): Collegamento[] {
   const link: Collegamento[] = [];

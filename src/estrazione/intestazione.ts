@@ -2,6 +2,7 @@
 // Portata dal prototipo `extract.mjs` (vedi issue #5). Il documento, quando letto, avrà la precedenza.
 import { normalizzaClasse } from '../normalizza.ts';
 import { estraiLuogo, type Luoghi, type ProvinciaDa } from './luoghi.ts';
+import { estraiScadenza } from './scadenza.ts';
 import { piega } from './testo.ts';
 
 export const TIPI = ['interpello', 'annullamento', 'rettifica', 'riapertura', 'esito'] as const;
@@ -97,6 +98,8 @@ export type Intestazione = {
   intestazione: string;
   /** I testi dei link ai documenti, nell'ordine: il protocollo della notizia è spesso lì. */
   etichetteDocumenti: readonly string[];
+  /** La data di pubblicazione: dà l'anno a una scadenza che non lo dice. Senza, la scadenza non si cerca. */
+  pubblicataIl?: Date;
 };
 
 /** I campi di un Interpello ricavati dall'intestazione. */
@@ -118,9 +121,11 @@ export type DatiInterpello = {
   /** Le ore della supplenza (di solito settimanali). */
   ore: number | null;
   finoAl: string | null;
+  /** Entro quando candidarsi (vedi `scadenza.ts`). */
+  scadenza: Date | null;
 };
 
-export function estraiDaIntestazione({ intestazione, etichetteDocumenti }: Intestazione, luoghi: Luoghi): DatiInterpello {
+export function estraiDaIntestazione({ intestazione, etichetteDocumenti, pubblicataIl }: Intestazione, luoghi: Luoghi): DatiInterpello {
   const tipo = classificaTipo(intestazione);
   const { classi, dedotte } = estraiClassi(intestazione);
   const luogo = estraiLuogo(intestazione, luoghi);
@@ -150,5 +155,6 @@ export function estraiDaIntestazione({ intestazione, etichetteDocumenti }: Intes
     protocolloRiferito: tipo === 'interpello' ? null : nellIntestazione?.numero ?? null,
     ore: estraiOre(intestazione),
     finoAl: estraiFinoAl(intestazione),
+    scadenza: pubblicataIl ? estraiScadenza(intestazione, pubblicataIl) : null,
   };
 }

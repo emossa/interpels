@@ -11,10 +11,14 @@ import {
   type Tipo,
 } from './intestazione.ts';
 import { estraiLuogo, type Luoghi, type ProvinciaDa } from './luoghi.ts';
+import { estraiScadenza } from './scadenza.ts';
 import { piega } from './testo.ts';
 
-/** Il testo salvato di un documento: la pagina 1 e la regione dell'Oggetto (anche se fosse oltre la pagina 1). */
-export type TestoDocumento = { testo: string; regioneOggetto: string | null };
+/**
+ * Il testo salvato di un documento: la pagina 1, la regione dell'Oggetto (anche se fosse oltre la pagina 1)
+ * e, quando letto, il testo delle pagine seguenti.
+ */
+export type TestoDocumento = { testo: string; regioneOggetto: string | null; testoSeguente?: string | null };
 
 /** Quante righe (non vuote) al massimo forma la carta intestata. */
 const RIGHE_CARTA_INTESTATA = 15;
@@ -79,6 +83,8 @@ export type DatiDocumento = {
   provinciaDa: ProvinciaDa | null;
   protocollo: string | null;
   dataProtocollo: string | null;
+  /** Entro quando candidarsi: dal corpo, a differenza degli altri campi (vedi `scadenza.ts`). */
+  scadenza: Date | null;
 };
 
 // Destinatari dell'atto (l'USP, l'albo…): la carta intestata finisce lì.
@@ -145,7 +151,8 @@ function scuolaIntestata(righe: readonly string[]): string | null {
 /** Il numero di protocollo come nelle intestazioni: `0008494` → `8494`, `3390/2026` → `3390`. */
 const numeroProtocollo = (numero: string) => numero.replace(/\/(?:19|20)\d{2}$/, '').replace(/^0+(?=\d)/, '');
 
-export function estraiDaDocumento({ testo, regioneOggetto }: TestoDocumento, luoghi: Luoghi): DatiDocumento {
+/** `pubblicataIl` dà l'anno a una scadenza che non lo dice; senza, la scadenza non si cerca. */
+export function estraiDaDocumento({ testo, regioneOggetto, testoSeguente }: TestoDocumento, luoghi: Luoghi, pubblicataIl?: Date): DatiDocumento {
   const oggetto = oggettoDa(regioneOggetto ?? trovaRegioneOggetto(testo));
   const righe = cartaIntestata(testo);
 
@@ -184,6 +191,7 @@ export function estraiDaDocumento({ testo, regioneOggetto }: TestoDocumento, luo
     provinciaDa,
     protocollo: protocollo ? numeroProtocollo(protocollo.numero) : null,
     dataProtocollo: protocollo?.data ?? null,
+    scadenza: pubblicataIl ? estraiScadenza(`${testo}\n${testoSeguente ?? ''}`, pubblicataIl) : null,
   };
 }
 
@@ -208,6 +216,7 @@ export function unisci(intestazione: DatiInterpello, documento: DatiDocumento): 
   confronta('comune', intestazione.comune, documento.comune, (a, b) => piega(a) === piega(b));
   confronta('provincia', intestazione.provincia, documento.provincia);
   confronta('protocollo', intestazione.protocollo, documento.protocollo, (a, b) => numeroProtocollo(a) === numeroProtocollo(b));
+  confronta('scadenza', intestazione.scadenza?.toISOString() ?? null, documento.scadenza?.toISOString() ?? null);
 
   const dallaCarta = documento.provincia !== null;
   const dati: DatiInterpello = {
@@ -223,6 +232,7 @@ export function unisci(intestazione: DatiInterpello, documento: DatiDocumento): 
     provinciaDa: dallaCarta ? documento.provinciaDa : intestazione.provinciaDa,
     protocollo: documento.protocollo ?? intestazione.protocollo,
     dataProtocollo: documento.protocollo ? documento.dataProtocollo : intestazione.dataProtocollo,
+    scadenza: documento.scadenza ?? intestazione.scadenza,
   };
   // Un avviso che l'Oggetto dice "interpello" non si riferisce a un altro protocollo.
   if (dati.tipo === 'interpello') dati.protocolloRiferito = null;

@@ -88,6 +88,9 @@ export const LETTORI: Lettori = { pdf: pdftotext, ocr: tesseract, docx: mammothD
 const TESTO_MINIMO = 50;
 /** Un DOCX non ha pagine: se ne tiene l'inizio, quanto una pagina. */
 const CARATTERI_PAGINA = 4000;
+/** Le pagine lette dopo la prima, per la scadenza; e quanto testo se ne tiene al più. */
+const ULTIMA_PAGINA_SEGUENTE = 5;
+const CARATTERI_SEGUENTI = 4 * CARATTERI_PAGINA;
 /** Un file più grande di così, dentro un archivio, non si estrae. */
 const DIMENSIONE_MASSIMA_PARTE = 50 * 1024 * 1024;
 /** Quanti archivi uno dentro l'altro si aprono. */
@@ -107,6 +110,11 @@ export type DocumentoLetto = {
   testo: string | null;
   /** La riga dell'Oggetto e le seguenti, anche se fuori dalla pagina 1. */
   regioneOggetto: string | null;
+  /**
+   * Il testo delle pagine dopo la prima (fino alla 5; per una scansione solo la 2), dove sta spesso la scadenza.
+   * Vuoto se non ce ne sono; null se il documento non si è potuto leggere, o è un archivio.
+   */
+  testoSeguente: string | null;
   /** Perché il testo manca o è inservibile: comincia con "documento non leggibile". Null per un archivio letto. */
   errore: string | null;
   /** Solo per un archivio: i documenti che contiene, già letti, anche da archivi dentro l'archivio. */
@@ -136,7 +144,7 @@ const formato = (corpo: Uint8Array): Formato => {
  */
 const NON_DOCUMENTO = /(^|\/)(__MACOSX\/|\.|thumbs\.db$|desktop\.ini$)|\.(xml|txt|json|csv|html?|eml|p7s|sig|url|lnk)$/i;
 
-const nonLeggibile = (motivo: string) => ({ testo: null, regioneOggetto: null, errore: `${NON_LEGGIBILE}: ${motivo}` });
+const nonLeggibile = (motivo: string) => ({ testo: null, regioneOggetto: null, testoSeguente: null, errore: `${NON_LEGGIBILE}: ${motivo}` });
 const primaRiga = (errore: unknown) => (errore as Error).message.split('\n')[0];
 
 /** Legge un documento già scaricato: l'hash sempre; il testo se è un PDF (con testo o scansionato) o un DOCX; le parti se è uno ZIP. */
@@ -169,7 +177,7 @@ async function leggi(corpo: Uint8Array, tipo: string, lettori: Lettori, profondi
     else parti.push({ nome, letto });
   }
   if (parti.length === 0) return { ...base, ...nonLeggibile('archivio vuoto') };
-  return { ...base, testo: null, regioneOggetto: null, errore: null, parti };
+  return { ...base, testo: null, regioneOggetto: null, testoSeguente: null, errore: null, parti };
 }
 
 async function leggiPdf(corpo: Uint8Array, { pdf, ocr }: Lettori) {
@@ -180,19 +188,21 @@ async function leggiPdf(corpo: Uint8Array, { pdf, ocr }: Lettori) {
     return nonLeggibile(`PDF rotto (${primaRiga(errore)})`);
   }
   if (testo.trim().length >= TESTO_MINIMO) {
-    // L'Oggetto dopo una carta intestata lunga può finire a pagina 2.
-    const regioneOggetto = trovaRegioneOggetto(testo) ?? trovaRegioneOggetto(await pdf(corpo, { dalla: 2, alla: 3 }).catch(() => ''));
-    return { testo, regioneOggetto, errore: null };
+    // L'Oggetto dopo una carta intestata lunga può finire a pagina 2; la scadenza è spesso a pagina 2 o oltre.
+    const seguente = await pdf(corpo, { dalla: 2, alla: ULTIMA_PAGINA_SEGUENTE }).catch(() => '');
+    const regioneOggetto = trovaRegioneOggetto(testo) ?? trovaRegioneOggetto(seguente);
+    return { testo, regioneOggetto, testoSeguente: seguente.slice(0, CARATTERI_SEGUENTI), errore: null };
   }
-  // Una scansione: si legge con l'OCR la pagina 1, e la 2 se l'Oggetto non è nella prima.
+  // Una scansione: si legge con l'OCR la pagina 1, e la 2 (per l'Oggetto, se non è nella prima, e per la scadenza).
   try {
     testo = await ocr(corpo, 1);
   } catch (errore) {
     return nonLeggibile(`OCR non riuscito (${primaRiga(errore)})`);
   }
   if (testo.trim().length < TESTO_MINIMO) return nonLeggibile('scansione senza testo riconoscibile');
-  const regioneOggetto = trovaRegioneOggetto(testo) ?? trovaRegioneOggetto(await ocr(corpo, 2).catch(() => ''));
-  return { testo, regioneOggetto, errore: null };
+  const seguente = await ocr(corpo, 2).catch(() => '');
+  const regioneOggetto = trovaRegioneOggetto(testo) ?? trovaRegioneOggetto(seguente);
+  return { testo, regioneOggetto, testoSeguente: seguente.slice(0, CARATTERI_SEGUENTI), errore: null };
 }
 
 async function leggiDocx(corpo: Uint8Array, { docx }: Lettori) {
@@ -204,7 +214,12 @@ async function leggiDocx(corpo: Uint8Array, { docx }: Lettori) {
   }
   if (testo.length < TESTO_MINIMO) return nonLeggibile('DOCX senza testo');
   // mammoth separa i paragrafi con una riga vuota: come le righe di un PDF, un paragrafo è una riga.
-  return { testo: testo.slice(0, CARATTERI_PAGINA), regioneOggetto: trovaRegioneOggetto(testo), errore: null };
+  return {
+    testo: testo.slice(0, CARATTERI_PAGINA),
+    regioneOggetto: trovaRegioneOggetto(testo),
+    testoSeguente: testo.slice(CARATTERI_PAGINA, CARATTERI_PAGINA + CARATTERI_SEGUENTI),
+    errore: null,
+  };
 }
 
 function tipoDaNome(nome: string): string {

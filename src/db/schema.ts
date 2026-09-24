@@ -96,6 +96,8 @@ export const interpello = pgTable(
     ore: integer(),
     /** "fino al" come scritto (es. `30/06/2027`, "termine delle attività"). */
     finoAl: text('fino_al'),
+    /** Entro quando candidarsi, a Roma; senza un'ora indicata, la fine del giorno (23:59:59). Null se non trovata. */
+    scadenza: timestamp({ withTimezone: true }),
     /** L'hash del documento (l'avviso) da cui vengono i campi che vincono sull'intestazione. */
     documento: text().references(() => documento.hash),
     /** L'impronta del testo dell'avviso, uguale per le sue copie inoltrate con un'altra segnatura: vedi `fusione.ts`. */
@@ -184,6 +186,11 @@ export const documento = pgTable('documento', {
   testo: text(),
   /** La riga dell'Oggetto e le seguenti, anche se fuori dalla pagina 1. */
   regioneOggetto: text('regione_oggetto'),
+  /**
+   * Il testo delle pagine dopo la prima (fino alla 5), per la scadenza; vuoto se non ce ne sono.
+   * Null se non letto: i documenti salvati prima si riscaricano alla prossima lettura della loro Pubblicazione.
+   */
+  testoSeguente: text('testo_seguente'),
   /** Perché il testo manca: "documento non leggibile: …" (7z, scansione illeggibile…); null anche per un archivio letto. */
   errore: text(),
   creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),

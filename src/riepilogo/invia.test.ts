@@ -89,7 +89,7 @@ test('con --separa-province un Riepilogo per Provincia allo stesso indirizzo; gl
   assert.doesNotMatch(perBa!.testo, /Scuola 2/);
   assert.match(perBr!.testo, /Scuola 2 — provincia di BR/);
   assert.doesNotMatch(perBr!.testo, /Scuola 1/);
-  for (const m of [perBa!, perBr!]) assert.match(m.testo, /── Da verificare ─+\n\n• Scuola 3\n  A011\n  ⚠ provincia non specificata/);
+  for (const m of [perBa!, perBr!]) assert.match(m.testo, /── Da verificare ─+\n\n• Scuola 3\n  A011 · scadenza non indicata\n  ⚠ provincia non specificata/);
 
   const riepiloghi = await db.select().from(schema.riepilogo).orderBy(schema.riepilogo.id);
   assert.deepEqual(
@@ -154,4 +154,20 @@ test('un Riepilogo di Provincia rifiutato si ritenta da solo; quello senza Provi
   assert.doesNotMatch(mittente.inviati[1]!.testo, /Da verificare/);
   const invii = await db.select().from(schema.invio).where(eq(schema.invio.destinatarioId, separa.id));
   assert.deepEqual(invii.map((i) => i.interpelloId).sort(), [ba, br, senzaProvincia].sort());
+});
+
+test('il primo Riepilogo è per Destinatario: chi ha già avuto quello di una Provincia non ha un «primo» per le altre', async (t) => {
+  const db = await dbDiTest(t);
+  const gia = await destinatario(db, 'gia@example.org', true);
+  const nuovo = await destinatario(db, 'nuovo@example.org', true);
+  await db.insert(schema.riepilogo).values({ destinatarioId: gia.id, giorno: '2026-09-23', provincia: 'BA', inviatoIl: new Date('2026-09-23T04:40:00Z') });
+  // Un Interpello di Brindisi pubblicato ben prima che fossero aggiunti, ancora aperto.
+  const aperto = await interpello(db, 'BR');
+  await db.update(schema.interpello).set({ scadenza: new Date('2026-09-30T10:00:00Z') }).where(eq(schema.interpello.id, aperto));
+  await db.update(schema.pubblicazione).set({ pubblicataIl: new Date('2026-09-01T08:00:00Z') });
+  const mittente = new FakeMittente();
+
+  await inviaRiepiloghi(db, mittente, preparazione('2026-09-24T04:40:00Z'));
+  assert.deepEqual(mittente.inviati.map((m) => [m.a, m.oggetto]), [['nuovo@example.org', 'Interpelli BR: 1 nuovo (A011) · 24 set 2026']]);
+  assert.deepEqual((await db.select().from(schema.invio)).map((i) => [i.destinatarioId, i.interpelloId]), [[nuovo.id, aperto]]);
 });

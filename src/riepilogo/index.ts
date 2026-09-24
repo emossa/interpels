@@ -1,17 +1,17 @@
 // Dai dati salvati ai Riepiloghi: per ogni Destinatario attivo, cosa ha di nuovo e il messaggio da inviare.
-import { eq, gte, inArray, min, or, sql } from 'drizzle-orm';
+import { eq, gt, gte, inArray, min, or, sql } from 'drizzle-orm';
 import type { Configurazione } from '../config.ts';
 import { schema, type Db } from '../db/index.ts';
 import { elencaDestinatari } from '../destinatari.ts';
 import type { Messaggio } from '../mittente.ts';
 import type { AvvisiDelGiorno } from '../stato-fonti.ts';
-import { componi, GIORNI_ANTERIORI, perProvincia, type Candidato, type ContenutoRiepilogo, type PossibileDuplicato } from './componi.ts';
+import { componi, GIORNI_ANTERIORI, GIORNI_SENZA_SCADENZA, perProvincia, type Candidato, type ContenutoRiepilogo, type PossibileDuplicato } from './componi.ts';
 import { giornoDiRoma, rendiRiepilogo } from './rendi.ts';
 
 export { giornoDiRoma } from './rendi.ts';
 
 const GIORNO = 24 * 60 * 60 * 1000;
-const { interpello, invio, possibileDuplicato, pubblicazione, pubblicazioneInterpello } = schema;
+const { interpello, invio, possibileDuplicato, pubblicazione, pubblicazioneInterpello, riepilogo } = schema;
 
 export type RiepilogoPronto = {
   destinatarioId: number;
@@ -42,8 +42,13 @@ export async function preparaRiepiloghi(db: Db, preparazione: Preparazione): Pro
   const destinatari = (await elencaDestinatari(db)).filter((d) => d.attivo);
   if (destinatari.length === 0) return [];
 
-  const piuVecchio = Math.min(...destinatari.map((d) => d.creatoIl.getTime()));
-  const candidati = await caricaCandidati(db, new Date(piuVecchio - GIORNI_ANTERIORI * GIORNO), preparazione.nomiFonti);
+  const primi = await primiRiepiloghi(db);
+  const adesso = preparazione.adesso.getTime();
+  let dal = Math.min(...destinatari.map((d) => d.creatoIl.getTime() - GIORNI_ANTERIORI * GIORNO));
+  // Chi riceve il primo Riepilogo riceve anche ciò che è ancora aperto, pubblicato quando che sia.
+  const qualcunoAlPrimo = destinatari.some((d) => !primi.has(d.id));
+  if (qualcunoAlPrimo) dal = Math.min(dal, adesso - GIORNI_SENZA_SCADENZA * GIORNO);
+  const candidati = await caricaCandidati(db, new Date(dal), preparazione.nomiFonti, qualcunoAlPrimo ? preparazione.adesso : undefined);
   const contesto = {
     classi: preparazione.configurazione.classi,
     gruppi: preparazione.configurazione.gruppi,
@@ -56,7 +61,7 @@ export async function preparaRiepiloghi(db: Db, preparazione: Preparazione): Pro
   const pronti: RiepilogoPronto[] = [];
   for (const destinatario of destinatari) {
     const inviati = await giaInviati(db, destinatario.id);
-    const contenuto = componi(destinatario, candidati, inviati, contesto);
+    const contenuto = componi({ ...destinatario, primoRiepilogo: primi.get(destinatario.id) ?? null }, candidati, inviati, contesto);
     if (!contenuto) continue;
     const contenuti = destinatario.separaProvince ? perProvincia(contenuto, destinatario.preferenze.province) : [contenuto];
     for (const c of contenuti) {
@@ -68,8 +73,16 @@ export async function preparaRiepiloghi(db: Db, preparazione: Preparazione): Pro
   return pronti;
 }
 
-/** Gli Interpelli la cui prima Pubblicazione è dal `dal` in poi, con tutte le loro Pubblicazioni. */
-export async function caricaCandidati(db: Db, dal: Date, nomiFonti: ReadonlyMap<string, string>): Promise<Candidato[]> {
+/**
+ * Gli Interpelli la cui prima Pubblicazione è dal `dal` in poi, e (con `scadenzaDopo`) quelli che scadono dopo
+ * quell'istante, con tutte le loro Pubblicazioni.
+ */
+export async function caricaCandidati(
+  db: Db,
+  dal: Date,
+  nomiFonti: ReadonlyMap<string, string>,
+  scadenzaDopo?: Date,
+): Promise<Candidato[]> {
   const recenti = db
     .select({ id: pubblicazioneInterpello.interpelloId })
     .from(pubblicazioneInterpello)
@@ -82,7 +95,11 @@ export async function caricaCandidati(db: Db, dal: Date, nomiFonti: ReadonlyMap<
     .from(interpello)
     .innerJoin(pubblicazioneInterpello, eq(pubblicazioneInterpello.interpelloId, interpello.id))
     .innerJoin(pubblicazione, eq(pubblicazione.id, pubblicazioneInterpello.pubblicazioneId))
-    .where(inArray(interpello.id, recenti))
+    .where(
+      scadenzaDopo
+        ? or(inArray(interpello.id, recenti), gt(interpello.scadenza, sql`${scadenzaDopo.toISOString()}::timestamptz`))
+        : inArray(interpello.id, recenti),
+    )
     .orderBy(interpello.id, pubblicazione.pubblicataIl, pubblicazione.id);
 
   const perId = new Map<number, Candidato & { pubblicazioni: Candidato['pubblicazioni'][number][] }>();
@@ -100,8 +117,7 @@ export async function caricaCandidati(db: Db, dal: Date, nomiFonti: ReadonlyMap<
         documentoNonLeggibile: i.documentoNonLeggibile,
         ore: i.ore,
         finoAl: i.finoAl,
-        // La scadenza non si estrae ancora: arriverà con la lettura dei documenti.
-        scadenza: null,
+        scadenza: i.scadenza,
         pubblicazioni: [],
       };
       perId.set(i.id, c);
@@ -143,6 +159,15 @@ async function possibiliDuplicati(db: Db, ids: number[], nomiFonti: ReadonlyMap<
     }
   }
   return perId;
+}
+
+/** Per ogni Destinatario che ne ha già ricevuto uno, quando gli è stato inviato il primo Riepilogo. */
+async function primiRiepiloghi(db: Db): Promise<Map<number, Date>> {
+  const righe = await db
+    .select({ id: riepilogo.destinatarioId, primo: min(riepilogo.inviatoIl) })
+    .from(riepilogo)
+    .groupBy(riepilogo.destinatarioId);
+  return new Map(righe.flatMap((r) => (r.primo ? [[r.id, new Date(r.primo)] as const] : [])));
 }
 
 async function giaInviati(db: Db, destinatarioId: number): Promise<Set<number>> {

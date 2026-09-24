@@ -7,6 +7,8 @@ import { confronta, espandiPreferenze } from './corrispondenza.ts';
 
 /** Un Interpello può entrare nel Riepilogo di chi è stato aggiunto al più questi giorni dopo la sua prima Pubblicazione. */
 export const GIORNI_ANTERIORI = 3;
+/** Nel primo Riepilogo di un Destinatario, un Interpello senza scadenza entra se pubblicato al più questi giorni prima. */
+export const GIORNI_SENZA_SCADENZA = 7;
 const GIORNO = 24 * 60 * 60 * 1000;
 
 /** Una Pubblicazione di un Interpello, con il nome della sua Fonte da mostrare. */
@@ -81,6 +83,8 @@ export type ContenutoRiepilogo = {
 export type DestinatarioDaServire = {
   creatoIl: Date;
   preferenze: Preferenze;
+  /** Quando gli è stato inviato il primo Riepilogo; null se questo è il primo. */
+  primoRiepilogo: Date | null;
 };
 
 export type Contesto = {
@@ -94,8 +98,11 @@ export type Contesto = {
 };
 
 /**
- * Gli Interpelli nuovi per un Destinatario: che gli interessano, non ancora inviati a lui e la cui prima
- * Pubblicazione è al più 3 giorni prima che fosse aggiunto. Null quando non c'è nulla (niente Riepilogo).
+ * Gli Interpelli nuovi per un Destinatario: che gli interessano e non ancora inviati a lui. Null quando non
+ * c'è nulla (niente Riepilogo).
+ * - Nel primo Riepilogo, tutti quelli ancora aperti (vedi `aperto`), da quando sono stati pubblicati.
+ * - Nei successivi, quelli la cui prima Pubblicazione è al più 3 giorni prima che fosse aggiunto; tranne
+ *   quelli che il primo Riepilogo ha lasciato fuori perché già chiusi.
  */
 export function componi(
   destinatario: DestinatarioDaServire,
@@ -105,13 +112,18 @@ export function componi(
 ): ContenutoRiepilogo | null {
   const volute = espandiPreferenze(destinatario.preferenze, contesto.gruppi);
   const dal = destinatario.creatoIl.getTime() - GIORNI_ANTERIORI * GIORNO;
+  const { primoRiepilogo } = destinatario;
+  const entra = (candidato: Candidato, pubblicatoIl: Date) =>
+    primoRiepilogo
+      ? pubblicatoIl.getTime() >= dal && aperto(candidato.scadenza, pubblicatoIl, primoRiepilogo)
+      : aperto(candidato.scadenza, pubblicatoIl, contesto.adesso);
 
   const perClasse = new Map<string, Voce[]>();
   const daVerificare: Voce[] = [];
   for (const candidato of candidati) {
     if (giaInviati.has(candidato.id) || candidato.pubblicazioni.length === 0) continue;
     const pubblicatoIl = new Date(Math.min(...candidato.pubblicazioni.map((p) => p.pubblicataIl.getTime())));
-    if (pubblicatoIl.getTime() < dal) continue;
+    if (!entra(candidato, pubblicatoIl)) continue;
     const corrispondenza = confronta(candidato, volute);
     if (!corrispondenza) continue;
 
@@ -163,6 +175,15 @@ export function perProvincia(contenuto: ContenutoRiepilogo, province: readonly s
 /** Prima le Classi con più Interpelli, a parità per codice. */
 function perNumero(a: GruppoRiepilogo, b: GruppoRiepilogo): number {
   return b.voci.length - a.voci.length || a.classe.localeCompare(b.classe);
+}
+
+/**
+ * Un Interpello è aperto a un certo istante se la sua scadenza è dopo; senza scadenza nota, se è stato
+ * pubblicato al più 7 giorni prima.
+ */
+export function aperto(scadenza: Date | null, pubblicatoIl: Date, istante: Date): boolean {
+  if (scadenza) return scadenza.getTime() > istante.getTime();
+  return pubblicatoIl.getTime() >= istante.getTime() - GIORNI_SENZA_SCADENZA * GIORNO;
 }
 
 /** Prima la scadenza più vicina; quelle senza scadenza nota dopo, per data di pubblicazione. */

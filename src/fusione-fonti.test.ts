@@ -138,9 +138,11 @@ test('una notizia di una scuola di Brindisi su USP Brindisi e sui Decreti di USP
   assert.deepEqual([giorno2.inviati, giorno2.falliti], [[], []]);
   assert.equal(mittente.inviati.length, 1);
 
-  // Chi non l'ha ancora avuto lo trova una volta, con la Pagina di entrambe le Fonti.
+  // Chi non l'ha ancora avuto lo trova una volta, con la Pagina di entrambe le Fonti, finché non scade
+  // ("entro e non oltre le ore 13,00 del 22.01.2026").
   await destinatario(db, 'secondo@example.org', 'A033', '2026-01-22T00:00:00Z');
-  const [pronto] = await preparaRiepiloghi(db, preparazione('2026-01-23T05:40:00Z'));
+  assert.deepEqual(await preparaRiepiloghi(db, preparazione('2026-01-23T05:40:00Z')), []);
+  const [pronto] = await preparaRiepiloghi(db, preparazione('2026-01-22T11:59:00Z'));
   assert.equal(pronto!.interpelli.length, 1);
   assert.match(pronto!.messaggio.testo, /Pagina \(USP Brindisi\): https:\/\/www\.istruzionebrindisi\.it\/interpello-regionale-classe-di-concorso-a033\//);
   assert.match(pronto!.messaggio.testo, /Pagina \(USP Bari – Decreti\): https:\/\/www\.uspbari\.it\/usp\/pubblicazione-decreti-e-sentenze/);
@@ -191,9 +193,12 @@ test('lo stesso file ripubblicato si fonde per hash; una voce senza protocollo c
   const invii = await db.select().from(schema.invio).where(eq(schema.invio.destinatarioId, primo.id));
   assert.deepEqual(invii.map((i) => i.interpelloId).sort(), [daBrindisi.interpello.id, daDecreti.interpello.id].sort());
 
-  // Chi li riceve insieme vede la nota su entrambi, senza "già inviato".
+  // Chi li riceve insieme vede la nota su entrambi, senza "già inviato": prima che quello di Brindisi scada
+  // ("entro le ore 13,00 del 11/09/2026"); dopo, riceve solo quello dei Decreti, che non dice la scadenza.
   await destinatario(db, 'secondo@example.org', 'A057', '2026-09-11T00:00:00Z');
-  const [pronto] = await preparaRiepiloghi(db, preparazione('2026-09-12T05:00:00Z'));
+  const [dopo] = await preparaRiepiloghi(db, preparazione('2026-09-12T05:00:00Z'));
+  assert.deepEqual(dopo!.interpelli, [daDecreti.interpello.id]);
+  const [pronto] = await preparaRiepiloghi(db, preparazione('2026-09-11T08:00:00Z'));
   assert.equal(pronto!.messaggio.testo.match(/potrebbe essere lo stesso di/g)!.length, 2);
   assert.doesNotMatch(pronto!.messaggio.testo, /già inviato/);
 });

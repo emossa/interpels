@@ -100,6 +100,7 @@ test('salva le Pubblicazioni e un Interpello per ciascuna, con i campi dall\'int
       protocolloRiferito: null,
       ore: null,
       finoAl: null,
+      scadenza: null,
       // Qui la rete non c'è: il documento non si scarica e restano i campi dell'intestazione.
       documento: null,
       impronta: null,
@@ -354,6 +355,42 @@ test('rileggi ricava di nuovo gli Interpelli dal testo salvato, senza riscaricar
   assert.deepEqual([interpello.classi, interpello.comune, interpello.discordanze.length], [['ADEE'], 'Noicattaro', 3]);
   assert.equal((await interpelloDi(db, '102')).comune, 'Monopoli');
   assert.equal((await db.select().from(schema.interpello)).length, 2);
+});
+
+test('la scadenza viene dalle pagine seguenti del documento; rileggi la ricava per gli Interpelli già salvati', async (t) => {
+  const db = await dbDiTest(t);
+  const { http, richiesti } = clientDocumenti(pdfDiContraddetta);
+  await raccogli(db, [fonteFinta('prova', () => [contraddetta]).fonte], { http, luoghi, adesso });
+  // "entro le ore 10.00 del\n25/09/2026", a pagina 2 dell'avviso di Noicattaro.
+  assert.equal((await interpelloDi(db, '201')).scadenza?.toISOString(), '2026-09-25T08:00:00.000Z');
+
+  // Salvato prima che la scadenza si estraesse.
+  await db.update(schema.interpello).set({ scadenza: null });
+  const scaricati = richiesti.length;
+  await rileggi(db, luoghi);
+  assert.equal(richiesti.length, scaricati);
+  assert.equal((await interpelloDi(db, '201')).scadenza?.toISOString(), '2026-09-25T08:00:00.000Z');
+});
+
+test('un documento salvato prima che si tenessero le pagine seguenti si riscarica alla prossima lettura, e dà la scadenza', async (t) => {
+  const db = await dbDiTest(t);
+  const { http, richiesti } = clientDocumenti(pdfDiContraddetta);
+  const { fonte } = fonteFinta('prova', () => [contraddetta]);
+  await raccogli(db, [fonte], { http, luoghi, adesso });
+  await db.update(schema.documento).set({ testoSeguente: null });
+  await db.update(schema.interpello).set({ scadenza: null });
+
+  await rileggi(db, luoghi);
+  // Solo la pagina 1: la scadenza non c'è.
+  assert.equal((await interpelloDi(db, '201')).scadenza, null);
+
+  const scaricati = richiesti.length;
+  await raccogli(db, [fonte], { http, luoghi, adesso });
+  assert.equal(richiesti.length, scaricati + 2);
+  assert.equal((await interpelloDi(db, '201')).scadenza?.toISOString(), '2026-09-25T08:00:00.000Z');
+  // Ora le pagine seguenti ci sono: non si riscarica più.
+  await raccogli(db, [fonte], { http, luoghi, adesso });
+  assert.equal(richiesti.length, scaricati + 2);
 });
 
 // --- Pacchetti: più avvisi in una Pubblicazione, come più PDF o dentro uno ZIP.
