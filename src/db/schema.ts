@@ -1,7 +1,7 @@
 // Schema Drizzle. `pnpm db:generate` ne ricava le migrazioni SQL in `drizzle/`.
 // Ogni slice aggiunge qui le sue tabelle.
 import { sql } from 'drizzle-orm';
-import { boolean, check, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { boolean, check, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { DocumentoGrezzo } from '../adapter/adapter.ts';
 import type { Personale, Tipo } from '../estrazione/intestazione.ts';
 import type { ProvinciaDa } from '../estrazione/luoghi.ts';
@@ -115,4 +115,39 @@ export const pubblicazioneInterpello = pgTable(
       .references(() => interpello.id, { onDelete: 'cascade' }),
   },
   (t) => [primaryKey({ columns: [t.pubblicazioneId, t.interpelloId] })],
+);
+
+/**
+ * Un Riepilogo inviato: al massimo uno per Destinatario per giorno (Europe/Rome), registrato
+ * solo dopo che il server di posta l'ha accettato. Le prove (`--dry-run`) non lo scrivono.
+ */
+export const riepilogo = pgTable(
+  'riepilogo',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    destinatarioId: integer('destinatario_id')
+      .notNull()
+      .references(() => destinatario.id, { onDelete: 'cascade' }),
+    /** Il giorno del Riepilogo a Roma, `AAAA-MM-GG`. */
+    giorno: date({ mode: 'string' }).notNull(),
+    inviatoIl: timestamp('inviato_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('riepilogo_destinatario_giorno').on(t.destinatarioId, t.giorno)],
+);
+
+/** Quali Interpelli sono già stati inviati a ogni Destinatario, e con quale Riepilogo: al massimo una volta. */
+export const invio = pgTable(
+  'invio',
+  {
+    destinatarioId: integer('destinatario_id')
+      .notNull()
+      .references(() => destinatario.id, { onDelete: 'cascade' }),
+    interpelloId: integer('interpello_id')
+      .notNull()
+      .references(() => interpello.id, { onDelete: 'cascade' }),
+    riepilogoId: integer('riepilogo_id')
+      .notNull()
+      .references(() => riepilogo.id, { onDelete: 'cascade' }),
+  },
+  (t) => [primaryKey({ columns: [t.destinatarioId, t.interpelloId] })],
 );

@@ -14,7 +14,7 @@ test('le migrazioni si applicano su PGlite e creano le tabelle', async (t) => {
   );
   assert.deepEqual(
     rows.map((r) => r.table_name),
-    ['destinatario', 'interpello', 'preferenza', 'pubblicazione', 'pubblicazione_interpello'],
+    ['destinatario', 'interpello', 'invio', 'preferenza', 'pubblicazione', 'pubblicazione_interpello', 'riepilogo'],
   );
 
   // Riapplicarle non fa nulla: quelle già applicate sono registrate.

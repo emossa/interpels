@@ -1,5 +1,7 @@
 // `pnpm job …`: raccoglie dalle Fonti (e più avanti invia i Riepiloghi).
 // Il database è quello di `DATABASE_URL` in `.env` (caricato con `--env-file-if-exists`) o dell'ambiente.
+import { join } from 'node:path';
+import { caricaConfigurazione, RADICE_PROGETTO } from '../config.ts';
 import { connetti, urlDatabase } from '../db/index.ts';
 import { caricaLuoghi } from '../estrazione/luoghi.ts';
 import { caricaFonti } from '../fonti.ts';
@@ -13,6 +15,8 @@ try {
     fonti: caricaFonti(),
     http: creaClientHttp(),
     luoghi: caricaLuoghi(),
+    configurazione: caricaConfigurazione(),
+    cartellaUscita: join(RADICE_PROGETTO, 'out'),
     adesso: new Date(),
     scrivi: (testo) => console.log(testo),
     scriviErrore: (testo) => console.error(testo),

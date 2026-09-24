@@ -1,14 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { eq } from 'drizzle-orm';
 import { clientRegistrato, leggiRegistrazioni } from '../adapter/registrazioni.ts';
 import { wordpress } from '../adapter/wordpress.ts';
-import { schema } from '../db/index.ts';
+import { caricaConfigurazione } from '../config.ts';
+import { schema, type Db } from '../db/index.ts';
+import { aggiungiDestinatario, disattivaDestinatario } from '../destinatari.ts';
 import { creaDbDiTest } from '../db/test-db.ts';
 import { caricaLuoghi } from '../estrazione/luoghi.ts';
 import { caricaFonti, type Fonte } from '../fonti.ts';
 import { eseguiJob, type AmbienteJob } from './comandi-job.ts';
 
 const luoghi = caricaLuoghi();
+const configurazione = caricaConfigurazione();
 // Le risposte registrate da uspbari.it: la prima lettura (30 giorni) e quella incrementale.
 const registrazioni = [
   ...leggiRegistrazioni('wordpress', 'usp-bari-post.json'),
@@ -30,6 +37,8 @@ const rotta: Fonte = {
 async function ambienteDiTest(t: { after: (fn: () => Promise<void>) => void }) {
   const { db, chiudi } = await creaDbDiTest();
   t.after(chiudi);
+  const cartellaUscita = mkdtempSync(join(tmpdir(), 'interpels-out-'));
+  t.after(async () => rmSync(cartellaUscita, { recursive: true, force: true }));
   const uscita: string[] = [];
   const errori: string[] = [];
   const ambiente: AmbienteJob = {
@@ -37,11 +46,13 @@ async function ambienteDiTest(t: { after: (fn: () => Promise<void>) => void }) {
     fonti: [uspBariPost, rotta],
     http: clientRegistrato(registrazioni),
     luoghi,
+    configurazione,
+    cartellaUscita,
     adesso: new Date('2026-09-24T00:00:00Z'),
     scrivi: (testo) => uscita.push(testo),
     scriviErrore: (testo) => errori.push(testo),
   };
-  return { db, ambiente, uscita, errori };
+  return { db, ambiente, uscita, errori, cartellaUscita };
 }
 
 test('--solo-raccolta --fonte usp-bari-post salva Pubblicazioni e Interpelli; rieseguirlo non crea duplicati', async (t) => {
@@ -74,12 +85,59 @@ test('senza --fonte legge tutte le Fonti; una che fallisce dà codice 1 ma non f
   assert.equal((await db.select().from(schema.pubblicazione)).length, 20);
 });
 
+/** Aggiunge un Destinatario come se fosse stato aggiunto in quel momento. */
+async function destinatarioAggiuntoIl(db: Db, creatoIl: string, email: string, preferenze: { classi?: string[]; gruppi?: string[]; province: string[] }) {
+  const d = await aggiungiDestinatario(db, configurazione, { email, preferenze: { classi: [], gruppi: [], ...preferenze } });
+  await db.update(schema.destinatario).set({ creatoIl: new Date(creatoIl) }).where(eq(schema.destinatario.id, d.id));
+  return d;
+}
+
+test('--dry-run scrive HTML e testo per chi ha Interpelli nuovi, niente per gli altri, e non registra nulla', async (t) => {
+  const { db, ambiente, uscita, errori, cartellaUscita } = await ambienteDiTest(t);
+  // Nel registrato: sostegno primaria (ADEE) in provincia di Bari, e un avviso docente a Bari senza Classe.
+  await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'primaria@example.org', { classi: ['ADEE'], province: ['BA'] });
+  // Vuole il Gruppo Sostegno secondaria a Brindisi: nulla gli corrisponde (ci sono solo avvisi ATA senza Provincia).
+  await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'secondaria@example.org', { classi: ['A011'], gruppi: ['Sostegno secondaria'], province: ['BR'] });
+  const disattivato = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'ex@example.org', { classi: ['ADEE'], province: ['BA'] });
+  await disattivaDestinatario(db, disattivato.email);
+
+  assert.equal(await eseguiJob(['--dry-run', '--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.deepEqual(errori, []);
+
+  const cartella = join(cartellaUscita, '2026-09-24');
+  assert.deepEqual(readdirSync(cartella).sort(), ['primaria@example.org.html', 'primaria@example.org.txt']);
+  const testo = readFileSync(join(cartella, 'primaria@example.org.txt'), 'utf8');
+  const html = readFileSync(join(cartella, 'primaria@example.org.html'), 'utf8');
+  assert.match(testo, /^Oggetto: Interpelli: 7 nuovi \(ADEE\) · 24 set 2026\n/);
+  // Sei ADEE dal 17/09 in poi (3 giorni prima dell'aggiunta), e l'avviso senza Classe da verificare in fondo.
+  assert.equal(testo.match(/^• /gm)?.length, 7);
+  assert.match(testo, /── Da verificare ─+\n\n• [^\n]+\n  ⚠ classe di concorso non specificata\n/);
+  assert.doesNotMatch(testo, /Palo del Colle/); // ADAA non voluta, ADEE del 16/09 troppo vecchia
+  assert.match(testo, /Fonti lette: USP Bari$/m);
+  assert.match(html, /^<!doctype html>/);
+  assert.match(uscita.at(-1)!, /^Prova: 1 Riepilogo scritto in .*2026-09-24 \(nulla inviato né registrato\)\.$/);
+
+  assert.deepEqual(await db.select().from(schema.riepilogo), []);
+  assert.deepEqual(await db.select().from(schema.invio), []);
+});
+
+test('--dry-run senza Interpelli nuovi non scrive file', async (t) => {
+  const { db, ambiente, uscita, cartellaUscita } = await ambienteDiTest(t);
+  // Aggiunto molto dopo le Pubblicazioni registrate: il limite dei 3 giorni le esclude tutte.
+  await destinatarioAggiuntoIl(db, '2026-10-10T08:00:00Z', 'tardi@example.org', { classi: ['ADEE'], province: ['BA'] });
+  assert.equal(await eseguiJob(['--dry-run', '--fonte', 'usp-bari-post'], ambiente), 0);
+  assert.equal(existsSync(join(cartellaUscita, '2026-09-24')), false);
+  assert.equal(uscita.at(-1), 'Prova: nessun Riepilogo, nessun Destinatario ha Interpelli nuovi.');
+});
+
 test('una Fonte sconosciuta o un\'opzione errata sono errori di uso', async (t) => {
   const { ambiente, errori } = await ambienteDiTest(t);
   assert.equal(await eseguiJob(['--fonte', 'nessuna'], ambiente), 2);
   assert.match(errori[0]!, /Fonte sconosciuta "nessuna" \(Fonti configurate: usp-bari-post, rotta\)/);
   assert.equal(await eseguiJob(['--boh'], ambiente), 2);
   assert.match(errori[1]!, /Uso:/);
+  assert.equal(await eseguiJob(['--dry-run', '--solo-raccolta'], ambiente), 2);
+  assert.match(errori[2]!, /non vanno insieme/);
 });
 
 test('config/fonti.json configura le Fonti usp-bari-post (WordPress) e usp-bari-decreti (pagina Decreti)', () => {

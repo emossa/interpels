@@ -46,8 +46,11 @@ Classi are normalised (`A11`, `A-11` → `A011`), Gruppi and Province must exist
 ```sh
 pnpm job --solo-raccolta                       # read every Fonte, store Pubblicazioni and Interpelli
 pnpm job --solo-raccolta --fonte usp-bari-post # one Fonte only
+pnpm job --dry-run                             # collect, then write each Riepilogo to out/<giorno>/<email>.html|.txt
 ```
 
-Uses the `DATABASE_URL` in `.env` (or the environment). A Fonte's first run reads 30 days of history; later runs start 7 days before its latest stored Pubblicazione, so recent edits are picked up. Pubblicazioni are unique per (Fonte, `chiave`) — the post id for WordPress; for the Decreti page the document URL, or a hash of heading + data di pubblicazione when there is no link of its own: re-reading an edited one updates it and its Interpelli in place. A failing Fonte doesn't stop the others; the exit code is then 1. Sending Riepiloghi is not built yet.
+Uses the `DATABASE_URL` in `.env` (or the environment). A Fonte's first run reads 30 days of history; later runs start 7 days before its latest stored Pubblicazione, so recent edits are picked up. Pubblicazioni are unique per (Fonte, `chiave`) — the post id for WordPress; for the Decreti page the document URL, or a hash of heading + data di pubblicazione when there is no link of its own: re-reading an edited one updates it and its Interpelli in place. A failing Fonte doesn't stop the others; the exit code is then 1. Sending Riepiloghi by email is not built yet.
+
+`--dry-run` builds today's Riepiloghi (`src/riepilogo/`) and hands them to `FileMittente` (`src/mittente.ts`) instead of sending them; it records nothing in `riepilogo` or `invio`. A Destinatario gets the docente Interpelli matching one of their Classi (Gruppi expanded) and their Provincia, not yet in `invio` for them, first published at most 3 days before they were added; Da verificare items come last, marked with what's missing. Those with nothing new get no file. After an intended rendering change, update the snapshots with `node --test --test-update-snapshots src/riepilogo/riepilogo.test.ts`.
 
 Extraction from the heading (Classi, Comune/Provincia via ISTAT, Scuola, Tipo, Personale, protocollo) lives in `src/estrazione/` and is shared by every Fonte. Its golden test runs over the committed corpus in `fixtures/estrazione/`; after an intended rule change, update the snapshot with `node --test --test-update-snapshots src/estrazione/golden.test.ts`. Adapter tests use recorded responses in `fixtures/<adapter>/` and never hit the network.

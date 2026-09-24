@@ -1,0 +1,86 @@
+exports[`resa in HTML 1`] = `
+
+<!doctype html>
+<html lang="it">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interpelli: 5 nuovi (ADMM, A011) · 24 set 2026</title></head>
+<body style="margin:0;padding:16px;background:#ffffff;color:#1f2328;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.45">
+<div style="max-width:640px;margin:0 auto">
+<h2 style="margin:24px 0 8px;padding-bottom:4px;border-bottom:2px solid #d0d7de;font-size:17px;color:#1f2328">ADMM · Sostegno nella scuola secondaria di I grado</h2>
+<div style="margin:0 0 14px;padding:0">
+<p style="margin:0;font-weight:bold">I.C. Valesium — Torchiarolo (BR)</p>
+<p style="margin:2px 0 0;color:#424a53">ADMM · 9 ore · scadenza 26/09 ore 12:00</p>
+<p style="margin:2px 0 0;color:#424a53">Pubblicato 24/09 · <a href="https://www.istruzionebrindisi.it/100.pdf" style="color:#0969da">Documento</a> · <a href="https://www.istruzionebrindisi.it/100/" style="color:#0969da">Pagina (USP Brindisi)</a></p>
+</div>
+<div style="margin:0 0 14px;padding:0">
+<p style="margin:0;font-weight:bold"><span style="display:inline-block;padding:0 6px;margin-right:6px;border-radius:3px;background:#fff1e5;color:#953800;font-size:12px;font-weight:bold">RETTIFICA</span>Primo I.C. — San Vito dei Normanni (BR)</p>
+<p style="margin:2px 0 0;color:#424a53">ADMM</p>
+<p style="margin:2px 0 0;color:#424a53">Pubblicato 23/09 · <a href="https://www.istruzionebrindisi.it/101.pdf" style="color:#0969da">Documento</a> · <a href="https://www.istruzionebrindisi.it/101/" style="color:#0969da">Pagina (USP Brindisi)</a></p>
+</div>
+<h2 style="margin:24px 0 8px;padding-bottom:4px;border-bottom:2px solid #d0d7de;font-size:17px;color:#1f2328">A011 · Discipline letterarie e latino</h2>
+<div style="margin:0 0 14px;padding:0">
+<p style="margin:0;font-weight:bold">Liceo &quot;Salvemini&quot; &lt;Bari&gt; — Bari (BA)</p>
+<p style="margin:2px 0 0;color:#424a53">A011, A012 · 18 ore · fino al 30/06/2027</p>
+<p style="margin:2px 0 0;color:#424a53">Pubblicato 22/09 · <a href="https://www.uspbari.it/doc.pdf?a=1&amp;b=2" style="color:#0969da">Documento</a> · <a href="https://www.uspbari.it/usp/pubblicazione-decreti-e-sentenze/" style="color:#0969da">Pagina (USP Bari – Decreti)</a> · <a href="https://www.uspbari.it/usp/interpello-a011/" style="color:#0969da">Pagina (USP Bari)</a></p>
+</div>
+<h2 style="margin:24px 0 8px;padding-bottom:4px;border-bottom:2px solid #d0d7de;font-size:17px;color:#1f2328">Da verificare</h2>
+<div style="margin:0 0 14px;padding:0">
+<p style="margin:0;font-weight:bold"><span style="display:inline-block;padding:0 6px;margin-right:6px;border-radius:3px;background:#fff1e5;color:#953800;font-size:12px;font-weight:bold">ESITO</span>Scuola non indicata</p>
+<p style="margin:2px 0 0;color:#424a53">ADMM</p>
+<p style="margin:2px 0 0;color:#9a6700">⚠ provincia non specificata</p>
+<p style="margin:2px 0 0;color:#424a53">Pubblicato 24/09 · <a href="https://www.istruzionebrindisi.it/103.pdf" style="color:#0969da">Documento</a> · <a href="https://www.istruzionebrindisi.it/103/" style="color:#0969da">Pagina (USP Brindisi)</a></p>
+</div>
+<div style="margin:0 0 14px;padding:0">
+<p style="margin:0;font-weight:bold">I.I.S.S. Majorana — Brindisi (BR)</p>
+<p style="margin:2px 0 0;color:#9a6700">⚠ classe di concorso non specificata</p>
+<p style="margin:2px 0 0;color:#424a53">Pubblicato 24/09</p>
+</div>
+<p style="margin:28px 0 0;padding-top:8px;border-top:1px solid #d0d7de;color:#656d76;font-size:12px">Generato il 24/09/2026 alle 06:40 · Fonti lette: USP Bari, USP Brindisi</p>
+</div>
+</body>
+</html>
+
+`;
+
+exports[`resa in testo semplice 1`] = `
+
+── ADMM · Sostegno nella scuola secondaria di I grado ───
+
+• I.C. Valesium — Torchiarolo (BR)
+  ADMM · 9 ore · scadenza 26/09 ore 12:00
+  Pubblicato 24/09
+  Documento: https://www.istruzionebrindisi.it/100.pdf
+  Pagina (USP Brindisi): https://www.istruzionebrindisi.it/100/
+
+• [RETTIFICA] Primo I.C. — San Vito dei Normanni (BR)
+  ADMM
+  Pubblicato 23/09
+  Documento: https://www.istruzionebrindisi.it/101.pdf
+  Pagina (USP Brindisi): https://www.istruzionebrindisi.it/101/
+
+── A011 · Discipline letterarie e latino ───────────
+
+• Liceo "Salvemini" <Bari> — Bari (BA)
+  A011, A012 · 18 ore · fino al 30/06/2027
+  Pubblicato 22/09
+  Documento: https://www.uspbari.it/doc.pdf?a=1&b=2
+  Pagina (USP Bari – Decreti): https://www.uspbari.it/usp/pubblicazione-decreti-e-sentenze/
+  Pagina (USP Bari): https://www.uspbari.it/usp/interpello-a011/
+
+── Da verificare ───────────────────────────────────
+
+• [ESITO] Scuola non indicata
+  ADMM
+  ⚠ provincia non specificata
+  Pubblicato 24/09
+  Documento: https://www.istruzionebrindisi.it/103.pdf
+  Pagina (USP Brindisi): https://www.istruzionebrindisi.it/103/
+
+• I.I.S.S. Majorana — Brindisi (BR)
+  ⚠ classe di concorso non specificata
+  Pubblicato 24/09
+
+—
+Generato il 24/09/2026 alle 06:40 · Fonti lette: USP Bari, USP Brindisi
+
+`;
