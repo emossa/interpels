@@ -1,0 +1,29 @@
+{
+  "name": "interpels",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Raccoglie gli interpelli per supplenze e invia a ogni Destinatario un Riepilogo giornaliero.",
+  "type": "module",
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file-if-exists=.env src/db/migra.ts",
+    "db:migrate:produzione": "node --env-file=.env.produzione src/db/migra.ts",
+    "destinatari": "node --env-file=.env.produzione src/cli/destinatari.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.3",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@types/node": "^24.13.6",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "^7.0.2"
+  }
+}

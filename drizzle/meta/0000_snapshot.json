@@ -1,0 +1,155 @@
+{
+  "id": "37960a4f-915b-4287-8882-edc87f0e816a",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.destinatario": {
+      "name": "destinatario",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "destinatario_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attivo": {
+          "name": "attivo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "disattivato_il": {
+          "name": "disattivato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "destinatario_email_unica": {
+          "name": "destinatario_email_unica",
+          "columns": [
+            {
+              "expression": "lower(\"email\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "destinatario_disattivazione_coerente": {
+          "name": "destinatario_disattivazione_coerente",
+          "value": "\"destinatario\".\"attivo\" = (\"destinatario\".\"disattivato_il\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.preferenza": {
+      "name": "preferenza",
+      "schema": "",
+      "columns": {
+        "destinatario_id": {
+          "name": "destinatario_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "genere": {
+          "name": "genere",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valore": {
+          "name": "valore",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "preferenza_destinatario_id_destinatario_id_fk": {
+          "name": "preferenza_destinatario_id_destinatario_id_fk",
+          "tableFrom": "preferenza",
+          "tableTo": "destinatario",
+          "columnsFrom": [
+            "destinatario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "preferenza_destinatario_id_genere_valore_pk": {
+          "name": "preferenza_destinatario_id_genere_valore_pk",
+          "columns": [
+            "destinatario_id",
+            "genere",
+            "valore"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "preferenza_genere_valido": {
+          "name": "preferenza_genere_valido",
+          "value": "\"preferenza\".\"genere\" in ('classe', 'gruppo', 'provincia')"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
