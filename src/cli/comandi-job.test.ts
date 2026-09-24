@@ -302,3 +302,100 @@ test('--rileggi ricava di nuovo gli Interpelli salvati senza leggere le Fonti', 
   assert.equal(await eseguiJob(['--rileggi', '--fonte', 'usp-bari-post'], ambiente), 2);
   assert.match(errori[0]!, /--rileggi non si combina/);
 });
+
+test('una Fonte che fallisce non ferma i Riepiloghi: il riquadro è in cima, e il job esce con 1 dopo aver inviato', async (t) => {
+  const { db, ambiente, errori, mittente } = await ambienteDiTest(t);
+  const primaria = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'primaria@example.org', { classi: ['ADEE'], province: ['BA'] });
+
+  assert.equal(await eseguiJob([], ambiente), 1);
+  assert.deepEqual(errori, ['rotta: errore: sito irraggiungibile']);
+  assert.equal(mittente.inviati.length, 1);
+  const [riepilogo] = mittente.inviati;
+  assert.equal(riepilogo!.oggetto, 'Interpelli: 7 nuovi (ADEE) · 24 set 2026');
+  const avviso = 'Rotta non consultabile da oggi: eventuali interpelli da questa fonte arriveranno appena torna disponibile.';
+  assert.ok(riepilogo!.testo.startsWith(`⚠ ${avviso}\n\n── `));
+  assert.ok(riepilogo!.html.includes(avviso));
+  assert.ok(riepilogo!.html.indexOf(avviso) < riepilogo!.html.indexOf('<h2'));
+  assert.match(riepilogo!.testo, /Fonti lette: USP Bari$/m);
+  // Il Riepilogo è registrato come sempre: gli Interpelli di Rotta arriveranno quando torna.
+  assert.deepEqual((await db.select().from(schema.riepilogo)).map((r) => r.destinatarioId), [primaria.id]);
+  assert.equal((await db.select().from(schema.invio)).length, 7);
+  const [stato] = await db.select().from(schema.statoFonte).where(eq(schema.statoFonte.fonte, 'rotta'));
+  assert.equal(stato!.problema, 'errore');
+});
+
+test('le email di solo Avviso partono quando il problema comincia, ogni 3 giorni e alla ripresa; mai due lo stesso giorno', async (t) => {
+  const { db, ambiente, uscita, mittente } = await ambienteDiTest(t);
+  // Nessun Interpello gli corrisponde mai: riceve solo Avvisi.
+  const tardi = await destinatarioAggiuntoIl(db, '2026-10-10T08:00:00Z', 'tardi@example.org', { classi: ['ADEE'], province: ['BA'] });
+  let giu = true;
+  const intermittente: Fonte = {
+    id: 'rotta',
+    nome: 'Rotta',
+    adapter: 'finto',
+    lettore: {
+      leggi: async () => {
+        if (giu) throw new Error('Risposta 503');
+        const intestazione = 'Interpello A011 - Liceo "Fermi", Bari';
+        return [{ chiave: 'r1', url: 'https://rotta.example/1', intestazione, pubblicataIl: ambiente.adesso, documenti: [] }];
+      },
+    },
+  };
+  ambiente.fonti = [uspBariPost, intermittente];
+  const giorno = (n: number, ora = '04:40') => new Date(`2026-09-${24 + n}T${ora}:00Z`);
+  const esegui = async (quando: Date) => {
+    ambiente.adesso = quando;
+    const prima = mittente.inviati.length;
+    const codice = await eseguiJob([], ambiente);
+    return { codice, nuovi: mittente.inviati.slice(prima) };
+  };
+
+  // Il problema comincia: un'email di solo Avviso, e il job esce con 1.
+  let { codice, nuovi } = await esegui(giorno(0, '00:00')); // l'ora delle risposte registrate
+  assert.equal(codice, 1);
+  assert.deepEqual(nuovi.map((m) => [m.a, m.oggetto]), [['tardi@example.org', 'Interpelli: avviso sulle fonti · 24 set 2026']]);
+  assert.equal(
+    nuovi[0]!.testo.split('\n—\n')[0],
+    '⚠ Rotta non consultabile da oggi: eventuali interpelli da questa fonte arriveranno appena torna disponibile.\n\nOggi nessun interpello nuovo per le tue preferenze.\n',
+  );
+  assert.match(nuovi[0]!.html, /non consultabile da oggi/);
+  assert.equal(uscita.at(-1), 'Avvisi: 1 email di solo avviso inviata.');
+  assert.ok(uscita.every((riga) => !riga.includes('@')));
+  assert.deepEqual((await db.select().from(schema.avviso)).map((a) => [a.destinatarioId, a.giorno]), [[tardi.id, '2026-09-24']]);
+
+  // Il job di riserva lo stesso giorno: niente doppione.
+  ({ codice, nuovi } = await esegui(giorno(0, '06:10')));
+  assert.equal(codice, 1);
+  assert.deepEqual(nuovi, []);
+
+  // Il problema dura: niente nei due giorni seguenti, un promemoria il terzo, una volta sola.
+  for (const n of [1, 2]) assert.deepEqual((await esegui(giorno(n))).nuovi, [], `giorno ${n}`);
+  ({ nuovi } = await esegui(giorno(3)));
+  assert.equal(nuovi.length, 1);
+  assert.match(nuovi[0]!.testo, /^⚠ Rotta non consultabile da 3 giorni: /);
+  assert.deepEqual((await esegui(giorno(3, '06:10'))).nuovi, []);
+
+  // Torna disponibile: un'email di ripresa, e il job esce con 0; poi più nulla.
+  giu = false;
+  ({ codice, nuovi } = await esegui(giorno(4)));
+  assert.equal(codice, 0);
+  assert.equal(nuovi.length, 1);
+  assert.match(nuovi[0]!.testo, /^✓ Rotta di nuovo disponibile\.\n/);
+  assert.deepEqual((await esegui(giorno(4, '06:10'))).nuovi, []);
+  assert.deepEqual((await esegui(giorno(5))).nuovi, []);
+  assert.equal((await db.select().from(schema.avviso)).length, 3);
+});
+
+test('--dry-run scrive anche le email di solo Avviso, senza segnarle come annunciate', async (t) => {
+  const { db, ambiente, uscita, cartellaUscita, mittente } = await ambienteDiTest(t);
+  await destinatarioAggiuntoIl(db, '2026-10-10T08:00:00Z', 'tardi@example.org', { classi: ['ADEE'], province: ['BA'] });
+  assert.equal(await eseguiJob(['--dry-run'], ambiente), 1);
+  assert.deepEqual(readdirSync(join(cartellaUscita, '2026-09-24')).sort(), ['tardi@example.org.html', 'tardi@example.org.txt']);
+  assert.match(uscita.at(-1)!, /^Prova: 1 email di solo avviso scritta in /);
+  assert.deepEqual(await db.select().from(schema.avviso), []);
+  const [stato] = await db.select().from(schema.statoFonte).where(eq(schema.statoFonte.fonte, 'rotta'));
+  assert.equal(stato!.ultimoAvvisoIl, null);
+  // L'invio vero dopo la prova lo annuncia ancora.
+  assert.equal(await eseguiJob([], ambiente), 1);
+  assert.equal(mittente.inviati.length, 1);
+});

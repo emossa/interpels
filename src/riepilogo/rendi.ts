@@ -1,4 +1,5 @@
 // Il Riepilogo come email: oggetto, HTML semplice con stili in linea e testo semplice. In italiano.
+import type { Avviso } from '../stato-fonti.ts';
 import { classiDelRiepilogo, totale, type ContenutoRiepilogo, type Voce } from './componi.ts';
 
 export type Resa = { oggetto: string; html: string; testo: string };
@@ -85,7 +86,15 @@ function collegamenti(voce: Voce): Collegamento[] {
   return link.filter((c) => /^https?:\/\//i.test(c.url));
 }
 
-function piePagina(contenuto: ContenutoRiepilogo): string {
+/** Un'email di solo Avviso: per chi oggi non ha Interpelli nuovi ma deve sapere dei problemi delle Fonti. */
+export type ContenutoSoloAvvisi = {
+  giorno: string;
+  generatoIl: Date;
+  fontiLette: string[];
+  avvisi: readonly Avviso[];
+};
+
+function piePagina(contenuto: { generatoIl: Date; fontiLette: readonly string[] }): string {
   const { giorno, mese, anno, ora, minuti } = aRoma(contenuto.generatoIl);
   const fonti = contenuto.fontiLette.length > 0 ? contenuto.fontiLette.join(', ') : 'nessuna';
   return `Generato il ${giorno}/${mese}/${anno} alle ${ora}:${minuti} · Fonti lette: ${fonti}`;
@@ -95,8 +104,18 @@ const TITOLO_DA_VERIFICARE = 'Da verificare';
 
 // ── Testo semplice ──
 
+/** Il riquadro degli Avvisi in testo semplice: una riga per Fonte. */
+function testoAvvisi(avvisi: readonly Avviso[]): string[] {
+  if (avvisi.length === 0) return [];
+  return [...avvisi.map((a) => `${simbolo(a)} ${a.testo}`), ''];
+}
+
+function simbolo(avviso: Avviso): string {
+  return avviso.genere === 'ripresa' ? '✓' : '⚠';
+}
+
 function testo(contenuto: ContenutoRiepilogo): string {
-  const righe: string[] = [];
+  const righe: string[] = [...testoAvvisi(contenuto.avvisi)];
   const sezione = (titolo: string, voci: readonly Voce[]) => {
     righe.push(`── ${titolo} ${'─'.repeat(Math.max(3, 48 - titolo.length))}`, '');
     for (const voce of voci) righe.push(...testoVoce(voce), '');
@@ -138,6 +157,8 @@ const STILE = {
   titolo: 'margin:0;font-weight:bold',
   riga: 'margin:2px 0 0;color:#424a53',
   mancante: 'margin:2px 0 0;color:#9a6700',
+  avvisi: 'margin:0 0 20px;padding:10px 12px;border:1px solid #d4a72c;border-radius:6px;background:#fff8c5;color:#1f2328',
+  avviso: 'margin:0 0 4px',
   badge: 'display:inline-block;padding:0 6px;margin-right:6px;border-radius:3px;background:#fff1e5;color:#953800;font-size:12px;font-weight:bold',
   link: 'color:#0969da',
   piede: 'margin:28px 0 0;padding-top:8px;border-top:1px solid #d0d7de;color:#656d76;font-size:12px',
@@ -153,6 +174,7 @@ function html(contenuto: ContenutoRiepilogo): string {
     `<title>${escapeHtml(oggetto(contenuto))}</title></head>`,
     `<body style="${STILE.corpo}">`,
     `<div style="${STILE.contenitore}">`,
+    ...htmlAvvisi(contenuto.avvisi),
     ...sezioni,
     `<p style="${STILE.piede}">${escapeHtml(piePagina(contenuto))}</p>`,
     '</div>',
@@ -160,6 +182,37 @@ function html(contenuto: ContenutoRiepilogo): string {
     '</html>',
     '',
   ].join('\n');
+}
+
+/** Il riquadro evidenziato degli Avvisi, in cima: una riga per Fonte. */
+function htmlAvvisi(avvisi: readonly Avviso[]): string[] {
+  if (avvisi.length === 0) return [];
+  const righe = avvisi.map((a) => `<p style="${STILE.avviso}">${simbolo(a)} ${escapeHtml(a.testo)}</p>`);
+  return [`<div style="${STILE.avvisi}">`, ...righe, '</div>'];
+}
+
+// ── Email di solo Avviso ──
+
+export function rendiSoloAvvisi(contenuto: ContenutoSoloAvvisi): Resa {
+  const oggetto = `Interpelli: avviso sulle fonti · ${giornoEsteso(contenuto.giorno)}`;
+  const nota = 'Oggi nessun interpello nuovo per le tue preferenze.';
+  const testo = [...testoAvvisi(contenuto.avvisi), nota, '', '—', piePagina(contenuto), ''].join('\n');
+  const html = [
+    '<!doctype html>',
+    '<html lang="it">',
+    '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">',
+    `<title>${escapeHtml(oggetto)}</title></head>`,
+    `<body style="${STILE.corpo}">`,
+    `<div style="${STILE.contenitore}">`,
+    ...htmlAvvisi(contenuto.avvisi),
+    `<p style="${STILE.riga}">${escapeHtml(nota)}</p>`,
+    `<p style="${STILE.piede}">${escapeHtml(piePagina(contenuto))}</p>`,
+    '</div>',
+    '</body>',
+    '</html>',
+    '',
+  ].join('\n');
+  return { oggetto, html, testo };
 }
 
 function htmlSezione(titolo: string, voci: readonly Voce[]): string {

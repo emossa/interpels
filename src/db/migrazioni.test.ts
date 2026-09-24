@@ -15,6 +15,7 @@ test('le migrazioni si applicano su PGlite e creano le tabelle', async (t) => {
   assert.deepEqual(
     rows.map((r) => r.table_name),
     [
+      'avviso',
       'destinatario',
       'documento',
       'documento_pubblicazione',
@@ -24,6 +25,7 @@ test('le migrazioni si applicano su PGlite e creano le tabelle', async (t) => {
       'pubblicazione',
       'pubblicazione_interpello',
       'riepilogo',
+      'stato_fonte',
     ],
   );
 

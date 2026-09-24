@@ -2,6 +2,7 @@
 import type { DocumentoGrezzo } from '../adapter/adapter.ts';
 import type { Personale, Tipo } from '../estrazione/intestazione.ts';
 import type { Preferenze } from '../preferenze.ts';
+import type { Avviso } from '../stato-fonti.ts';
 import { confronta, espandiPreferenze } from './corrispondenza.ts';
 
 /** Un Interpello può entrare nel Riepilogo di chi è stato aggiunto al più questi giorni dopo la sua prima Pubblicazione. */
@@ -55,6 +56,8 @@ export type ContenutoRiepilogo = {
   daVerificare: Voce[];
   /** I nomi delle Fonti lette in questa esecuzione. */
   fontiLette: string[];
+  /** I problemi delle Fonti (e le riprese), in un riquadro in cima. */
+  avvisi: readonly Avviso[];
 };
 
 export type DestinatarioDaServire = {
@@ -69,6 +72,7 @@ export type Contesto = {
   giorno: string;
   adesso: Date;
   fontiLette: string[];
+  avvisi: readonly Avviso[];
 };
 
 /**
@@ -114,6 +118,7 @@ export function componi(
     gruppi,
     daVerificare: daVerificare.sort(perScadenza),
     fontiLette: contesto.fontiLette,
+    avvisi: contesto.avvisi,
   };
 }
 

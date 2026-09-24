@@ -4,6 +4,7 @@ import type { Configurazione } from '../config.ts';
 import { schema, type Db } from '../db/index.ts';
 import { elencaDestinatari } from '../destinatari.ts';
 import type { Messaggio } from '../mittente.ts';
+import type { AvvisiDelGiorno } from '../stato-fonti.ts';
 import { componi, GIORNI_ANTERIORI, type Candidato, type ContenutoRiepilogo } from './componi.ts';
 import { giornoDiRoma, rendiRiepilogo } from './rendi.ts';
 
@@ -26,6 +27,8 @@ export type Preparazione = {
   nomiFonti: ReadonlyMap<string, string>;
   /** I nomi delle Fonti lette in questa esecuzione, per il piè di pagina. */
   fontiLette: string[];
+  /** Gli Avvisi sulle Fonti: in cima a ogni Riepilogo, e se oggi vanno anche in email di solo Avviso. */
+  avvisi: AvvisiDelGiorno;
   adesso: Date;
 };
 
@@ -42,6 +45,7 @@ export async function preparaRiepiloghi(db: Db, preparazione: Preparazione): Pro
     giorno: giornoDiRoma(preparazione.adesso),
     adesso: preparazione.adesso,
     fontiLette: preparazione.fontiLette,
+    avvisi: preparazione.avvisi.avvisi,
   };
 
   const pronti: RiepilogoPronto[] = [];

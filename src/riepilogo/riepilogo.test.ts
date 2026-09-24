@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { componi, type Candidato, type Contesto, type DestinatarioDaServire } from './componi.ts';
-import { escapeHtml, giornoDiRoma, rendiRiepilogo } from './rendi.ts';
+import { escapeHtml, giornoDiRoma, rendiRiepilogo, rendiSoloAvvisi } from './rendi.ts';
 
 const contesto: Contesto = {
   classi: new Map([
@@ -16,6 +16,7 @@ const contesto: Contesto = {
   giorno: '2026-09-24',
   adesso: new Date('2026-09-24T04:40:00Z'),
   fontiLette: ['USP Bari', 'USP Brindisi'],
+  avvisi: [],
 };
 
 const destinatario: DestinatarioDaServire = {
@@ -191,4 +192,31 @@ test('resa in HTML', (t) => {
   assert.doesNotMatch(html, /<Bari>/);
   assert.doesNotMatch(html, /disiscri|unsubscribe/i);
   t.assert.snapshot(html, { serializers: [(s: string) => `\n${s}`] });
+});
+
+const avvisi = [
+  {
+    fonte: 'usp-brindisi',
+    genere: 'errore' as const,
+    testo: 'USP <Brindisi> non consultabile da 2 giorni: eventuali interpelli da questa fonte arriveranno appena torna disponibile.',
+  },
+  { fonte: 'usp-bari-post', genere: 'ripresa' as const, testo: 'USP Bari di nuovo disponibile.' },
+];
+
+test('il riquadro degli Avvisi sta in cima al Riepilogo, una riga per Fonte', () => {
+  const contenuto = componi(destinatario, [candidato({})], new Set(), { ...contesto, avvisi })!;
+  const { testo, html } = rendiRiepilogo(contenuto);
+  assert.ok(testo.startsWith(`⚠ ${avvisi[0]!.testo}\n✓ USP Bari di nuovo disponibile.\n\n── ADMM`));
+  const riquadro = html.indexOf('background:#fff8c5');
+  assert.ok(riquadro > html.indexOf('<body') && riquadro < html.indexOf('<h2'));
+  assert.match(html, /⚠ USP &lt;Brindisi&gt; non consultabile/);
+  // Senza problemi, nessun riquadro.
+  assert.doesNotMatch(rendiRiepilogo(componi(destinatario, [candidato({})], new Set(), contesto)!).html, /fff8c5/);
+});
+
+test('email di solo Avviso', (t) => {
+  const resa = rendiSoloAvvisi({ giorno: '2026-09-24', generatoIl: new Date('2026-09-24T04:40:00Z'), fontiLette: ['USP Bari'], avvisi });
+  assert.equal(resa.oggetto, 'Interpelli: avviso sulle fonti · 24 set 2026');
+  assert.doesNotMatch(resa.html, /<Brindisi>/);
+  t.assert.snapshot(resa, { serializers: [(r: { testo: string; html: string }) => `\n${r.testo}\n${r.html}`] });
 });

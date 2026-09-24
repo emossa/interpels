@@ -9,14 +9,18 @@ import type { ClientHttp } from '../http.ts';
 import { FileMittente, type Mittente } from '../mittente.ts';
 import { raccogli, rileggi } from '../raccolta.ts';
 import { giornoDiRoma, preparaRiepiloghi, type Preparazione } from '../riepilogo/index.ts';
+import { inviaSoloAvvisi, preparaSoloAvvisi } from '../riepilogo/avvisi.ts';
 import { inviaRiepiloghi } from '../riepilogo/invia.ts';
+import { aggiornaStatoFonti, avvisiDelGiorno, segnaAnnunciati, type AvvisiDelGiorno } from '../stato-fonti.ts';
 
 export const USO_JOB = `Uso:
   pnpm job [--solo-raccolta | --dry-run] [--fonte <id>]
   pnpm job --rileggi
 
   Senza opzioni raccoglie e invia a ogni Destinatario il Riepilogo di oggi via Gmail
-  (GMAIL_UTENTE, GMAIL_APP_PASSWORD), al massimo uno al giorno.
+  (GMAIL_UTENTE, GMAIL_APP_PASSWORD), al massimo uno al giorno. I problemi delle Fonti
+  compaiono in cima ai Riepiloghi; chi non ha un Riepilogo riceve un'email di solo avviso
+  quando un problema comincia, ogni 3 giorni finché dura e quando la Fonte si riprende.
 
   --solo-raccolta   legge le Fonti e salva Pubblicazioni e Interpelli, senza inviare Riepiloghi
   --dry-run         raccoglie e scrive i Riepiloghi in out/<giorno>/<destinatario>.html|.txt,
@@ -39,7 +43,10 @@ export type AmbienteJob = {
   scriviErrore: (testo: string) => void;
 };
 
-/** Esegue il job e restituisce il codice di uscita: 0 riuscito, 1 qualche Fonte o invio fallito, 2 uso errato. */
+/**
+ * Esegue il job e restituisce il codice di uscita: 0 riuscito, 1 qualche Fonte o invio fallito (dopo aver
+ * inviato comunque), 2 uso errato.
+ */
 export async function eseguiJob(argv: readonly string[], ambiente: AmbienteJob): Promise<number> {
   let opzioni: { 'solo-raccolta'?: boolean; 'dry-run'?: boolean; fonte?: string; rileggi?: boolean };
   try {
@@ -82,6 +89,7 @@ export async function eseguiJob(argv: readonly string[], ambiente: AmbienteJob):
   }
 
   const esiti = await raccogli(ambiente.db, fonti, ambiente);
+  const stati = new Map((await aggiornaStatoFonti(ambiente.db, esiti, ambiente.adesso)).map((s) => [s.fonte, s]));
   let fallite = 0;
   const lette: string[] = [];
   for (const esito of esiti) {
@@ -91,6 +99,9 @@ export async function eseguiJob(argv: readonly string[], ambiente: AmbienteJob):
     } else {
       lette.push(esito.fonte);
       ambiente.scrivi(`${esito.fonte}: ${esito.lette} lette, ${esito.nuove} nuove, ${esito.aggiornate} aggiornate`);
+      // Silenzio e formato non fanno fallire il job: lo dicono ai Destinatari, e qui a chi legge i log.
+      const stato = stati.get(esito.fonte);
+      if (stato?.problema) ambiente.scriviErrore(`${esito.fonte}: attenzione: ${stato.problema} (${stato.messaggio})`);
     }
   }
 
@@ -102,17 +113,27 @@ export async function eseguiJob(argv: readonly string[], ambiente: AmbienteJob):
   return fallite > 0 ? 1 : 0;
 }
 
-function preparazione(ambiente: AmbienteJob, fontiLette: readonly string[]): Preparazione {
-  const nomiFonti = new Map(ambiente.fonti.map((f) => [f.id, f.nome]));
+function nomiFonti(ambiente: AmbienteJob): Map<string, string> {
+  return new Map(ambiente.fonti.map((f) => [f.id, f.nome]));
+}
+
+function preparazione(ambiente: AmbienteJob, fontiLette: readonly string[], avvisi: AvvisiDelGiorno): Preparazione {
+  const nomi = nomiFonti(ambiente);
   return {
     configurazione: ambiente.configurazione,
-    nomiFonti,
-    fontiLette: fontiLette.map((id) => nomiFonti.get(id) ?? id),
+    nomiFonti: nomi,
+    fontiLette: fontiLette.map((id) => nomi.get(id) ?? id),
+    avvisi,
     adesso: ambiente.adesso,
   };
 }
 
-/** L'invio vero; restituisce quanti Riepiloghi sono stati rifiutati (ritentati dal prossimo job). */
+/** Nei log di GitHub Actions (pubblici, per un repo pubblico) un Destinatario si nomina per id, mai per email. */
+function senzaEmail(errore: string, pronto: { destinatarioId: number; messaggio: { a: string } }): string {
+  return errore.replaceAll(pronto.messaggio.a, `<Destinatario ${pronto.destinatarioId}>`);
+}
+
+/** L'invio vero; restituisce quante email sono state rifiutate (ritentate dal prossimo job). */
 async function inviaTutti(ambiente: AmbienteJob, fontiLette: readonly string[]): Promise<number> {
   let mittente: Mittente;
   try {
@@ -121,26 +142,48 @@ async function inviaTutti(ambiente: AmbienteJob, fontiLette: readonly string[]):
     ambiente.scriviErrore(`Invio: impossibile preparare il Mittente: ${(errore as Error).message}`);
     return 1;
   }
-  const esito = await inviaRiepiloghi(ambiente.db, mittente, preparazione(ambiente, fontiLette));
-  // I log di GitHub Actions di un repo pubblico sono pubblici: il Destinatario si nomina per id, mai per email.
+  const avvisi = await avvisiDelGiorno(ambiente.db, nomiFonti(ambiente), ambiente.adesso);
+  // Prima di inviare: il job di riserva di oggi li troverà ancora dovuti, quelli dei giorni seguenti no.
+  if (avvisi.daAnnunciare) await segnaAnnunciati(ambiente.db, ambiente.adesso);
+  const prep = preparazione(ambiente, fontiLette, avvisi);
+
+  const esito = await inviaRiepiloghi(ambiente.db, mittente, prep);
   for (const pronto of esito.inviati) ambiente.scrivi(`  Destinatario ${pronto.destinatarioId}: ${pronto.messaggio.oggetto}`);
   for (const { pronto, errore } of esito.falliti) {
-    const senzaEmail = errore.replaceAll(pronto.messaggio.a, `<Destinatario ${pronto.destinatarioId}>`);
-    ambiente.scriviErrore(`  Destinatario ${pronto.destinatarioId}: invio fallito: ${senzaEmail}`);
+    ambiente.scriviErrore(`  Destinatario ${pronto.destinatarioId}: invio fallito: ${senzaEmail(errore, pronto)}`);
   }
   const parti = [`${esito.inviati.length} ${esito.inviati.length === 1 ? 'Riepilogo inviato' : 'Riepiloghi inviati'}`];
   if (esito.falliti.length > 0) parti.push(`${esito.falliti.length} ${esito.falliti.length === 1 ? 'fallito' : 'falliti'} (da ritentare)`);
   if (esito.giaServiti > 0) parti.push(`${esito.giaServiti} già ${esito.giaServiti === 1 ? 'inviato' : 'inviati'} oggi`);
   ambiente.scrivi(`Invio: ${parti.join(', ')}.`);
-  return esito.falliti.length;
+
+  // Chi ha un Riepilogo rifiutato non riceve l'email di solo Avviso: il Riepilogo, ritentato, avrà il riquadro.
+  const esclusi = new Set(esito.falliti.map((f) => f.pronto.destinatarioId));
+  const soloAvvisi = await inviaSoloAvvisi(ambiente.db, mittente, prep, esclusi);
+  for (const pronto of soloAvvisi.inviati) ambiente.scrivi(`  Destinatario ${pronto.destinatarioId}: ${pronto.messaggio.oggetto}`);
+  for (const { pronto, errore } of soloAvvisi.falliti) {
+    ambiente.scriviErrore(`  Destinatario ${pronto.destinatarioId}: avviso fallito: ${senzaEmail(errore, pronto)}`);
+  }
+  const n = soloAvvisi.inviati.length;
+  if (n > 0 || soloAvvisi.falliti.length > 0) {
+    const falliti = soloAvvisi.falliti.length > 0 ? `, ${soloAvvisi.falliti.length} (da ritentare) non inviate` : '';
+    ambiente.scrivi(`Avvisi: ${n} ${n === 1 ? 'email di solo avviso inviata' : 'email di solo avviso inviate'}${falliti}.`);
+  }
+  return esito.falliti.length + soloAvvisi.falliti.length;
 }
 
-/** `--dry-run`: i Riepiloghi di oggi su file, con `FileMittente`; non registra nulla in `riepilogo` né in `invio`. */
+/**
+ * `--dry-run`: i Riepiloghi di oggi su file, con `FileMittente`, e le email di solo Avviso se oggi ce ne
+ * sarebbero; non registra nulla in `riepilogo`, `invio`, `avviso` né `stato_fonte.ultimo_avviso_il`.
+ */
 async function provaRiepiloghi(ambiente: AmbienteJob, fontiLette: readonly string[]): Promise<void> {
-  const pronti = await preparaRiepiloghi(ambiente.db, preparazione(ambiente, fontiLette));
+  const avvisi = await avvisiDelGiorno(ambiente.db, nomiFonti(ambiente), ambiente.adesso);
+  const prep = preparazione(ambiente, fontiLette, avvisi);
+  const pronti = await preparaRiepiloghi(ambiente.db, prep);
+  const soloAvvisi = await preparaSoloAvvisi(ambiente.db, prep, new Set(pronti.map((p) => p.destinatarioId)));
   const cartella = join(ambiente.cartellaUscita, giornoDiRoma(ambiente.adesso));
   const mittente = new FileMittente(cartella);
-  for (const pronto of pronti) {
+  for (const pronto of [...pronti, ...soloAvvisi]) {
     await mittente.invia(pronto.messaggio);
     ambiente.scrivi(`  ${pronto.messaggio.a}: ${pronto.messaggio.oggetto}`);
   }
@@ -150,4 +193,7 @@ async function provaRiepiloghi(ambiente: AmbienteJob, fontiLette: readonly strin
       ? 'Prova: nessun Riepilogo, nessun Destinatario ha Interpelli nuovi.'
       : `Prova: ${pronti.length} ${pronti.length === 1 ? 'Riepilogo scritto' : 'Riepiloghi scritti'} in ${dove} (nulla inviato né registrato).`,
   );
+  if (soloAvvisi.length > 0) {
+    ambiente.scrivi(`Prova: ${soloAvvisi.length} ${soloAvvisi.length === 1 ? 'email di solo avviso scritta' : 'email di solo avviso scritte'} in ${dove}.`);
+  }
 }

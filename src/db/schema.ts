@@ -198,3 +198,51 @@ export const documentoPubblicazione = pgTable(
     check('documento_pubblicazione_esito_coerente', sql`(${t.hash} is null) = (${t.errore} is not null)`),
   ],
 );
+
+export const PROBLEMI = ['errore', 'silenzio', 'formato'] as const;
+/** Cosa non va in una Fonte: non si legge (errore), tace da giorni (silenzio), non dà più Classi (formato). */
+export type Problema = (typeof PROBLEMI)[number];
+
+/**
+ * Lo stato di ogni Fonte dopo l'ultima lettura: il problema in corso, da quando, e il giorno in cui è stato
+ * annunciato ai Destinatari l'ultima volta (per ricordarlo ogni 3 giorni e non ripeterlo lo stesso giorno).
+ */
+export const statoFonte = pgTable(
+  'stato_fonte',
+  {
+    /** L'id della Fonte in `config/fonti.json`. */
+    fonte: text().primaryKey(),
+    ultimoSuccesso: timestamp('ultimo_successo', { withTimezone: true }),
+    ultimoErrore: timestamp('ultimo_errore', { withTimezone: true }),
+    /** Il dettaglio del problema in corso (per `errore` il messaggio dell'errore); nullo se non ce n'è. */
+    messaggio: text(),
+    problema: text().$type<Problema>(),
+    problemaDal: timestamp('problema_dal', { withTimezone: true }),
+    /** Il giorno (Roma, `AAAA-MM-GG`) in cui il problema, o la ripresa, è stato annunciato l'ultima volta. */
+    ultimoAvvisoIl: date('ultimo_avviso_il', { mode: 'string' }),
+    /** Quando la Fonte si è ripresa da un problema già annunciato: la ripresa si annuncia una volta. */
+    ripresaIl: timestamp('ripresa_il', { withTimezone: true }),
+  },
+  (t) => [
+    check('stato_fonte_problema_valido', sql`${t.problema} in ('errore', 'silenzio', 'formato')`),
+    check('stato_fonte_problema_dal_coerente', sql`(${t.problema} is null) = (${t.problemaDal} is null)`),
+  ],
+);
+
+/**
+ * Un'email di solo Avviso sulle Fonti, per chi quel giorno non riceve un Riepilogo: al massimo una
+ * per Destinatario per giorno (Roma), registrata dopo che il server di posta l'ha accettata.
+ */
+export const avviso = pgTable(
+  'avviso',
+  {
+    id: integer().primaryKey().generatedAlwaysAsIdentity(),
+    destinatarioId: integer('destinatario_id')
+      .notNull()
+      .references(() => destinatario.id, { onDelete: 'cascade' }),
+    /** Il giorno dell'email a Roma, `AAAA-MM-GG`. */
+    giorno: date({ mode: 'string' }).notNull(),
+    inviatoIl: timestamp('inviato_il', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('avviso_destinatario_giorno').on(t.destinatarioId, t.giorno)],
+);

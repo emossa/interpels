@@ -73,3 +73,7 @@ _Avoid_: filters, subscription, settings
 **Riepilogo**:
 The daily email to one Destinatario listing the matching Interpelli not yet sent to them; at most one per day, none when nothing matches. An Interpello is sent to a Destinatario at most once.
 _Avoid_: digest, summary, newsletter, report
+
+**Avviso**:
+One line telling Destinatari that a Fonte has a problem (*errore*: it can't be read; *silenzio*: nothing new for 7 days; *formato*: its Pubblicazioni stopped yielding Classi) or is back. Shown in a box atop every Riepilogo while the problem lasts; on days without a Riepilogo, sent as an alert-only email when the problem starts, every 3 days while it lasts, and on recovery. Never an Interpello.
+_Avoid_: alert, warning, notification
