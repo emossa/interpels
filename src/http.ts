@@ -36,8 +36,26 @@ export class ErroreHttp extends Error {
   }
 }
 
-/** Un errore per cui vale la pena riprovare: rete, 429, 5xx, content-type inatteso. */
+/** Un errore per cui vale la pena riprovare: rete, 429, 5xx, content-type inatteso, corpo che non è ciò che dice. */
 class ErroreTemporaneo extends ErroreHttp {}
+
+const TIPI_PDF = ['application/pdf', 'application/x-pdf'];
+
+/**
+ * Perché il corpo non è quello che la risposta dice di essere, o null se va bene.
+ * Aruba (USP Brindisi) risponde ai 429 con una pagina HTML e stato 200, anche per l'URL di un PDF:
+ * una pagina HTML quando non si è chiesto HTML, o un corpo senza `%PDF` quando il content-type
+ * o l'URL (anche dopo i redirect) dicono PDF, sono errori da riprovare.
+ */
+function corpoIncoerente(corpo: Uint8Array, tipo: string, url: readonly string[], tipi: readonly string[]): string | null {
+  const inizio = new TextDecoder('latin1').decode(corpo.subarray(0, 1024));
+  if (!tipi.includes('text/html') && /^\s*<(!doctype html|html|head|body)\b/i.test(inizio)) {
+    return 'Pagina HTML al posto del contenuto atteso (troppe richieste?)';
+  }
+  const dettoPdf = TIPI_PDF.includes(tipo) || url.some((u) => u !== '' && /\.pdf$/i.test(new URL(u).pathname));
+  if (dettoPdf && !inizio.includes('%PDF')) return 'Il corpo non è un PDF';
+  return null;
+}
 
 export const USER_AGENT = 'interpels (+https://github.com/emossa/interpels)';
 
@@ -90,6 +108,8 @@ export function creaClientHttp(opzioni: OpzioniHttp = {}): ClientHttp {
     if (!tipi.includes(tipo)) {
       throw new ErroreTemporaneo(url, risposta.status, `Content-type inatteso "${tipo}", atteso ${tipi.join(' o ')}`);
     }
+    const problema = corpoIncoerente(corpo, tipo, [url, risposta.url], tipi);
+    if (problema) throw new ErroreTemporaneo(url, risposta.status, problema);
     return { url, intestazioni: risposta.headers, corpo };
   }
 

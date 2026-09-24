@@ -1,0 +1,180 @@
+[
+  {
+    "url": "https://www.istruzionebrindisi.it/wp-json/wp/v2/posts?categories=984&after=2026-09-23T00%3A00%3A00Z&orderby=date&order=desc&per_page=10&page=1&_fields=id%2Cdate_gmt%2Clink%2Ctitle%2Ccontent",
+    "stato": 200,
+    "intestazioni": {
+      "content-type": "application/json; charset=UTF-8",
+      "x-wp-total": "13",
+      "x-wp-totalpages": "2"
+    },
+    "corpo": [
+      {
+        "id": 53700,
+        "date_gmt": "2026-09-24T06:39:05",
+        "link": "https://www.istruzionebrindisi.it/interpello-nazionale-per-supplenza-su-posto-di-arpa-aa55/",
+        "title": {
+          "rendered": "Interpello nazionale per supplenza su posto di arpa aa55"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-nazionale-per-supplenza-su-posto-di-arpa-aa55/?download=53701\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016520.23-09-2026</a> <small>(141 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53697,
+        "date_gmt": "2026-09-24T06:38:09",
+        "link": "https://www.istruzionebrindisi.it/interpello-nazionale-cdc-a040-scienze-e-tecnologie-elettriche-ed-elettroniche/",
+        "title": {
+          "rendered": "Interpello nazionale CDC A040 – Scienze e tecnologie elettriche ed elettroniche"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-nazionale-cdc-a040-scienze-e-tecnologie-elettriche-ed-elettroniche/?download=53698\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016518.23-09-2026</a> <small>(273 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53690,
+        "date_gmt": "2026-09-24T06:37:11",
+        "link": "https://www.istruzionebrindisi.it/4-supplenze-breve-scuola-primaria-posto-comune-eeee/",
+        "title": {
+          "rendered": "4 supplenze breve scuola primaria posto comune eeee"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/4-supplenze-breve-scuola-primaria-posto-comune-eeee/?download=53691\">annotazione_FIME0018_204990013</a> <small>(126 KB)</small></li><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/4-supplenze-breve-scuola-primaria-posto-comune-eeee/?download=53692\">annotazione_FIME0018_204990075 COMUNE AL 2 11</a> <small>(126 KB)</small></li><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/4-supplenze-breve-scuola-primaria-posto-comune-eeee/?download=53693\">annotazione_FIME0018_204990137 COMUNE AL 14 10</a> <small>(126 KB)</small></li><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/4-supplenze-breve-scuola-primaria-posto-comune-eeee/?download=53694\">annotazione_FIME0018_204990210 COMUNE AL 12 10</a> <small>(126 KB)</small></li><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/4-supplenze-breve-scuola-primaria-posto-comune-eeee/?download=53695\">FIME0018_204990013</a> <small>(125 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53687,
+        "date_gmt": "2026-09-24T06:35:04",
+        "link": "https://www.istruzionebrindisi.it/interpello-nazionale-cdc-a041-scienze-e-tecnologie-informatiche/",
+        "title": {
+          "rendered": "Interpello nazionale CDC A041 – Scienze e tecnologie informatiche"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-nazionale-cdc-a041-scienze-e-tecnologie-informatiche/?download=53688\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016516.23-09-2026</a> <small>(272 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53684,
+        "date_gmt": "2026-09-24T06:34:17",
+        "link": "https://www.istruzionebrindisi.it/interpello-classe-di-concorso-a042-9h-dal-01-10-2026-fino-al-termine-delle-lezioni/",
+        "title": {
+          "rendered": "Interpello – Classe di concorso A042 – 9h – Dal 01.10.2026 fino al termine delle lezioni"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-classe-di-concorso-a042-9h-dal-01-10-2026-fino-al-termine-delle-lezioni/?download=53685\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016514.23-09-2026</a> <small>(442 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53679,
+        "date_gmt": "2026-09-24T06:33:22",
+        "link": "https://www.istruzionebrindisi.it/supplenze-brevi-scuola-primaria-adee-sostegno/",
+        "title": {
+          "rendered": "Supplenze brevi scuola primaria adee sostegno"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/supplenze-brevi-scuola-primaria-adee-sostegno/?download=53680\">annotazione_FIME0018_204989863</a> <small>(126 KB)</small></li><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/supplenze-brevi-scuola-primaria-adee-sostegno/?download=53681\">annotazione_FIME0018_SOT AL 15 10</a> <small>(126 KB)</small></li><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/supplenze-brevi-scuola-primaria-adee-sostegno/?download=53682\">FIME0018_204989863</a> <small>(125 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53676,
+        "date_gmt": "2026-09-24T06:31:48",
+        "link": "https://www.istruzionebrindisi.it/annullamento-in-autotutela-dellinterpello-per-individuazione-reclutamento-di-personale-docente-supplenza-breve-su-posto-di-sostegno-scuola-primaria-adee-24-ore-settimanali-dal-28-09-2026-al-16/",
+        "title": {
+          "rendered": "Annullamento in autotutela dell&#8217;interpello per individuazione/reclutamento di personale docente – Supplenza breve su posto di sostegno scuola primaria (adee), 24 ore settimanali dal 28/09/2026 al 16/02/2027"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/annullamento-in-autotutela-dellinterpello-per-individuazione-reclutamento-di-personale-docente-supplenza-breve-su-posto-di-sostegno-scuola-primaria-adee-24-ore-settimanali-dal-28-09-2026-al-16/?download=53677\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016507.23-09-2026</a> <small>(466 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53673,
+        "date_gmt": "2026-09-24T06:30:55",
+        "link": "https://www.istruzionebrindisi.it/interpello-nazionale-per-nomina-fino-al-termine-delle-attivita-didattiche-30-06-2027-classe-di-concorso-ba02-conversazione-lingua-francese-6-ore-settimanali/",
+        "title": {
+          "rendered": "Interpello nazionale per nomina fino al termine delle attività&#8217; didattiche (30.06.2027) classe di concorso ba02 (conversazione lingua francese ) 6 ore settimanali"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-nazionale-per-nomina-fino-al-termine-delle-attivita-didattiche-30-06-2027-classe-di-concorso-ba02-conversazione-lingua-francese-6-ore-settimanali/?download=53674\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016506.23-09-2026</a> <small>(260 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53670,
+        "date_gmt": "2026-09-24T06:28:40",
+        "link": "https://www.istruzionebrindisi.it/interpello-n-1-posto-assistente-tecnico-ar16-fino-al-30-06-2027/",
+        "title": {
+          "rendered": "Interpello n. 1 posto assistente tecnico ar16 fino al 30/06/2027"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-n-1-posto-assistente-tecnico-ar16-fino-al-30-06-2027/?download=53671\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016420.23-09-2026</a> <small>(242 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53665,
+        "date_gmt": "2026-09-23T06:16:46",
+        "link": "https://www.istruzionebrindisi.it/interpello-copertura-disponibilita-profilo-funzionario-e-q-ex-dsga-presso-i-c-dante-alighieri-di-valderice-tp-graduatoria-provvisoria/",
+        "title": {
+          "rendered": "Interpello copertura disponibilità profilo funzionario e.q. (ex DSGA) presso I.C. &#8220;dante alighieri&#8221; di Valderice (TP) – Graduatoria provvisoria"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-copertura-disponibilita-profilo-funzionario-e-q-ex-dsga-presso-i-c-dante-alighieri-di-valderice-tp-graduatoria-provvisoria/?download=53666\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016408.23-09-2026</a> <small>(276 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      }
+    ]
+  },
+  {
+    "url": "https://www.istruzionebrindisi.it/wp-json/wp/v2/posts?categories=984&after=2026-09-23T00%3A00%3A00Z&orderby=date&order=desc&per_page=10&page=2&_fields=id%2Cdate_gmt%2Clink%2Ctitle%2Ccontent",
+    "stato": 200,
+    "intestazioni": {
+      "content-type": "application/json; charset=UTF-8",
+      "x-wp-total": "13",
+      "x-wp-totalpages": "2"
+    },
+    "corpo": [
+      {
+        "id": 53662,
+        "date_gmt": "2026-09-23T06:15:15",
+        "link": "https://www.istruzionebrindisi.it/interpello-per-la-copertura-dei-posti-disponibili-ma-non-vacanti-profilo-funzionario-e-q-dsga-graduatoria-definitiva/",
+        "title": {
+          "rendered": "Interpello per la copertura dei posti disponibili ma non vacanti, profilo funzionario e.q. – DSGA – Graduatoria definitiva"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-per-la-copertura-dei-posti-disponibili-ma-non-vacanti-profilo-funzionario-e-q-dsga-graduatoria-definitiva/?download=53663\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016407.23-09-2026</a> <small>(318 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53659,
+        "date_gmt": "2026-09-23T06:13:36",
+        "link": "https://www.istruzionebrindisi.it/interpello-per-la-copertura-di-un-posto-di-d-s-g-a-vacante-e-o-disponibile-per-un-unico-periodo-continuativo-superiore-a-tre-mesi-a-s-2026-27-ic-longi-meic847009-graduatoria-e-assegnazione-se/",
+        "title": {
+          "rendered": "Interpello per la copertura di un posto di DSGA vacante e/o disponibile per un unico periodo continuativo superiore a tre mesi – a.s. 2026/27 – I.C. longi (meic847009). graduatoria e assegnazione sede"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/interpello-per-la-copertura-di-un-posto-di-d-s-g-a-vacante-e-o-disponibile-per-un-unico-periodo-continuativo-superiore-a-tre-mesi-a-s-2026-27-ic-longi-meic847009-graduatoria-e-assegnazione-se/?download=53660\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016368.22-09-2026</a> <small>(441 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      },
+      {
+        "id": 53656,
+        "date_gmt": "2026-09-23T06:08:06",
+        "link": "https://www.istruzionebrindisi.it/peo-interpello-nazionale-per-il-conferimento-di-supplenze-per-linsegnamento-di-scienze-e-tecnologie-nautiche-classe-di-concorso-a043-a-s-2026-2027-disponibilita-di-nr-2-cattedre/",
+        "title": {
+          "rendered": "PEO – Interpello nazionale per il conferimento di supplenze per l&#8217;insegnamento di scienze e tecnologie nautiche – Classe di concorso A043 – a.s. 2026/2027 – Disponibilità di n. 2 cattedre"
+        },
+        "content": {
+          "rendered": "<!-- WP Attachments -->\r\n        <div class=\"wpa-attachments-block\">\r\n            <div class=\"wpa-attachments-head\">\r\n                <h3 class=\"wpa-attachments-title\">Allegati</h3>\r\n            </div>\r\n        <ul class=\"post-attachments\"><li class=\"post-attachment mime-application-pdf\"><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://www.istruzionebrindisi.it/peo-interpello-nazionale-per-il-conferimento-di-supplenze-per-linsegnamento-di-scienze-e-tecnologie-nautiche-classe-di-concorso-a043-a-s-2026-2027-disponibilita-di-nr-2-cattedre/?download=53657\">m_pi.AOOUSPBR.REGISTRO UFFICIALE(E).0016130.21-09-2026</a> <small>(897 KB)</small></li></ul></div>",
+          "protected": false
+        }
+      }
+    ]
+  }
+]

@@ -20,6 +20,11 @@ export type TestoDocumento = { testo: string; regioneOggetto: string | null };
 const RIGHE_CARTA_INTESTATA = 15;
 /** Quante righe dalla riga dell'Oggetto si salvano come sua regione, per poter rileggere con regole migliori. */
 const RIGHE_REGIONE_OGGETTO = 8;
+/**
+ * Quante righe dopo "OGGETTO:" possono continuarlo. Un Oggetto può elencare più Classi su righe
+ * successive (I.C. Valesium di Torchiarolo: ADEE alla terza riga, ADMM alla quinta).
+ */
+const RIGHE_OGGETTO_SEGUENTI = 6;
 
 const RIGA_OGGETTO = /^\s*oggetto\s*[:.\-–]?\s*/i;
 
@@ -38,7 +43,7 @@ export function oggettoDa(regione: string | null): string | null {
   if (!regione) return null;
   const [prima, ...seguenti] = regione.split('\n');
   const parti = [prima!.replace(RIGA_OGGETTO, '')];
-  for (const riga of seguenti.slice(0, 3)) {
+  for (const riga of seguenti.slice(0, RIGHE_OGGETTO_SEGUENTI)) {
     if (!riga.trim() || INIZIO_CORPO.test(riga)) break;
     parti.push(riga);
   }

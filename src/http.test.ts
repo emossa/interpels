@@ -88,3 +88,29 @@ test('scarica accetta solo i content-type indicati', async () => {
   assert.deepEqual([...corpo], [37, 80, 68, 70]);
   await assert.rejects(http.scarica('https://a.it/e.pdf', ['application/pdf']), /Content-type inatteso "text\/html"/);
 });
+
+test('una pagina HTML al posto di un documento è un errore da riprovare, anche con stato 200 e content-type da PDF', async () => {
+  // USP Brindisi (Aruba) sotto carico risponde "Too many requests" in HTML con stato 200.
+  const pdf = () => new Response(new TextEncoder().encode('%PDF-1.7\n...'), { headers: { 'content-type': 'application/pdf' } });
+  const troppe = (tipo: string) => () =>
+    new Response('<!DOCTYPE html>\n<html><title>429 Too Many Requests</title></html>', { status: 200, headers: { 'content-type': tipo } });
+  const url = 'https://www.istruzionebrindisi.it/avviso/?download=53701';
+  const { http, eventi } = finto({ [url]: [troppe('application/pdf'), troppe('application/octet-stream'), pdf] });
+  const { corpo } = await http.scarica(url, ['application/pdf', 'application/octet-stream']);
+  assert.equal(new TextDecoder().decode(corpo.subarray(0, 4)), '%PDF');
+  assert.deepEqual(eventi, [`GET ${url}`, 'attesa 1000', 'attesa 100', `GET ${url}`, 'attesa 2000', 'attesa 100', `GET ${url}`]);
+});
+
+test('un corpo che non è un PDF, dichiarato PDF o da un URL .pdf, è un errore', async () => {
+  const falso = (tipo: string) => () => new Response('non sono un pdf', { headers: { 'content-type': tipo } });
+  const { http } = finto({
+    'https://a.it/x': [falso('application/pdf'), falso('application/pdf'), falso('application/pdf')],
+    'https://a.it/y.PDF': [falso('application/octet-stream'), falso('application/octet-stream'), falso('application/octet-stream')],
+  });
+  await assert.rejects(http.scarica('https://a.it/x', ['application/pdf']), /non è un PDF/);
+  await assert.rejects(http.scarica('https://a.it/y.PDF', ['application/octet-stream']), /non è un PDF/);
+  // Gli altri formati passano così come sono: li giudica chi legge il documento.
+  const zip = () => new Response(new Uint8Array([0x50, 0x4b, 3, 4]), { headers: { 'content-type': 'application/zip' } });
+  const { http: http2 } = finto({ 'https://a.it/z.zip': [zip] });
+  assert.equal((await http2.scarica('https://a.it/z.zip', ['application/zip'])).corpo.length, 4);
+});

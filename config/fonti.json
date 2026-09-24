@@ -15,5 +15,14 @@
     "impostazioni": {
       "pagina": "https://www.uspbari.it/usp/pubblicazione-decreti-e-sentenze"
     }
+  },
+  {
+    "id": "usp-brindisi",
+    "nome": "USP Brindisi",
+    "adapter": "wordpress",
+    "impostazioni": {
+      "api": "https://www.istruzionebrindisi.it/wp-json/wp/v2/posts",
+      "categorie": [984]
+    }
   }
 ]

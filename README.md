@@ -17,7 +17,7 @@ pnpm test        # node:test; database tests run on PGlite with the real migrati
 ## Configuration
 
 - `config/classi.json` — Classi di concorso: normalised code → name. An unknown code is rejected, so add missing ones here.
-- `config/fonti.json` — Fonti: `id`, `nome`, `adapter` (a module in `src/adapter/`: `wordpress` for WordPress posts, `pagina-decreti` for the USP Bari Decreti page) and its `impostazioni`. A Fonte says nothing about where its schools are.
+- `config/fonti.json` — Fonti: `id`, `nome`, `adapter` (a module in `src/adapter/`: `wordpress` for WordPress posts, by `api` (the posts endpoint) and `cerca` (USP Bari) or `categorie` (USP Brindisi, category Interpelli 984); `pagina-decreti` for the USP Bari Decreti page) and its `impostazioni`. A Fonte says nothing about where its schools are.
 - `config/gruppi.json` — Gruppi di classi: name → Classi (e.g. *Sostegno secondaria* = ADMM + ADSS).
 - `data/comuni.csv` — the ISTAT list of comuni; `data/province.csv` — the Province (sigla, name, region) derived from it.
 
