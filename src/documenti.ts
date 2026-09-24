@@ -48,7 +48,7 @@ export type LeggiDocx = (corpo: Uint8Array) => Promise<string>;
 export type Lettori = { pdf: LeggiPdf; ocr: LeggiScansione; docx: LeggiDocx };
 
 async function inCartellaTemporanea<T>(lavoro: (cartella: string) => Promise<T>): Promise<T> {
-  const cartella = await mkdtemp(join(tmpdir(), 'interpels-'));
+  const cartella = await mkdtemp(join(tmpdir(), 'interpellevole-'));
   try {
     return await lavoro(cartella);
   } finally {

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { caricaFonti } from './fonti.ts';
 
 function conFonti(voci: unknown) {
-  const radice = mkdtempSync(join(tmpdir(), 'interpels-fonti-'));
+  const radice = mkdtempSync(join(tmpdir(), 'interpellevole-fonti-'));
   mkdirSync(join(radice, 'config'));
   writeFileSync(join(radice, 'config', 'fonti.json'), JSON.stringify(voci));
   return () => caricaFonti(radice);

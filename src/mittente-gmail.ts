@@ -27,7 +27,7 @@ export function trasportoGmail(credenziali: CredenzialiGmail): Transporter {
   });
 }
 
-/** Un messaggio per Destinatario, solo lui in `To:`, da `"Interpels" <GMAIL_UTENTE>`. */
+/** Un messaggio per Destinatario, solo lui in `To:`, da `"Interpellevole" <GMAIL_UTENTE>`. */
 export class GmailMittente implements Mittente {
   readonly #da: string;
   readonly #trasporto: Trasporto;
@@ -40,7 +40,7 @@ export class GmailMittente implements Mittente {
   async invia(messaggio: Messaggio): Promise<void> {
     // sendMail si risolve solo quando il server SMTP ha accettato il messaggio.
     await this.#trasporto.sendMail({
-      from: { name: 'Interpels', address: this.#da },
+      from: { name: 'Interpellevole', address: this.#da },
       to: messaggio.a,
       subject: messaggio.oggetto,
       html: messaggio.html,

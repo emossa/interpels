@@ -17,7 +17,7 @@ test('il trasporto è Gmail SMTP su 465 con TLS e la App Password', () => {
   trasporto.close();
 });
 
-test('un messaggio per Destinatario, solo lui in To:, da "Interpels", con HTML e testo', async () => {
+test('un messaggio per Destinatario, solo lui in To:, da "Interpellevole", con HTML e testo', async () => {
   const inviate: SentMessageInfo[] = [];
   const json = nodemailer.createTransport({ jsonTransport: true });
   const trasporto = { sendMail: async (m: SendMailOptions) => { const info = await json.sendMail(m); inviate.push(info); return info; } };
@@ -29,7 +29,7 @@ test('un messaggio per Destinatario, solo lui in To:, da "Interpels", con HTML e
   const busta = inviate[0]!.envelope as { from: string; to: string[] };
   assert.deepEqual(busta, { from: 'mittente@example.org', to: ['persona@example.org'] });
   const messaggio = JSON.parse(inviate[0]!.message as string);
-  assert.deepEqual(messaggio.from, { address: 'mittente@example.org', name: 'Interpels' });
+  assert.deepEqual(messaggio.from, { address: 'mittente@example.org', name: 'Interpellevole' });
   assert.deepEqual(messaggio.to, [{ address: 'persona@example.org', name: '' }]);
   assert.equal(messaggio.cc, undefined);
   assert.equal(messaggio.bcc, undefined);

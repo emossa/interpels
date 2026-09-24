@@ -1,5 +1,5 @@
 {
-  "name": "interpels",
+  "name": "interpellevole",
   "version": "0.0.0",
   "private": true,
   "description": "Raccoglie gli interpelli per supplenze e invia a ogni Destinatario un Riepilogo giornaliero.",

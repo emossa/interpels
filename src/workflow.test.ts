@@ -1,4 +1,4 @@
-// Il workflow pianificato `.github/workflows/riepilogo.yml`: committato ma spento finché INTERPELS_ATTIVO non vale 'true'.
+// Il workflow pianificato `.github/workflows/riepilogo.yml`: committato ma spento finché INTERPELLEVOLE_ATTIVO non vale 'true'.
 // Non c'è un parser YAML tra le dipendenze: i controlli guardano il testo, e il passo del ping si esegue davvero con bash.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -36,8 +36,8 @@ test('pianificato alle 06:40 e 08:10 di Roma, con e senza ora legale, e avviabil
   assert.match(workflow, /^\s+workflow_dispatch:\s*$/m);
 });
 
-test('spento: il job gira solo se la variabile INTERPELS_ATTIVO vale true', () => {
-  assert.match(workflow, /^jobs:\n\s+riepilogo:\n\s+if: vars\.INTERPELS_ATTIVO == 'true'$/m);
+test('spento: il job gira solo se la variabile INTERPELLEVOLE_ATTIVO vale true', () => {
+  assert.match(workflow, /^jobs:\n\s+riepilogo:\n\s+if: vars\.INTERPELLEVOLE_ATTIVO == 'true'$/m);
 });
 
 test('le esecuzioni non si sovrappongono', () => {
@@ -71,7 +71,7 @@ test('il ping di healthchecks.io parte solo con HEALTHCHECK_URL impostato', () =
   assert.match(ping, /HEALTHCHECK_URL: \$\{\{ secrets\.HEALTHCHECK_URL \}\}/);
 
   // Un `curl` finto al posto di quello vero: registra con quali argomenti è stato chiamato.
-  const cartella = mkdtempSync(join(tmpdir(), 'interpels-ping-'));
+  const cartella = mkdtempSync(join(tmpdir(), 'interpellevole-ping-'));
   try {
     const registro = join(cartella, 'curl.log');
     writeFileSync(join(cartella, 'curl'), `#!/bin/sh\necho "$@" >> "${registro}"\n`);

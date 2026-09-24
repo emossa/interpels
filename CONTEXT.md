@@ -1,4 +1,4 @@
-# Interpels
+# Interpellevole
 
 Collects interpelli (schools' calls for substitute teachers) from the offices that publish them and emails each recipient a daily summary of the ones matching their classi di concorso and province.
 

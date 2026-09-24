@@ -38,7 +38,7 @@ const rotta: Fonte = {
 async function ambienteDiTest(t: { after: (fn: () => Promise<void>) => void }) {
   const { db, chiudi } = await creaDbDiTest();
   t.after(chiudi);
-  const cartellaUscita = mkdtempSync(join(tmpdir(), 'interpels-out-'));
+  const cartellaUscita = mkdtempSync(join(tmpdir(), 'interpellevole-out-'));
   t.after(async () => rmSync(cartellaUscita, { recursive: true, force: true }));
   const uscita: string[] = [];
   const errori: string[] = [];

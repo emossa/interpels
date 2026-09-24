@@ -57,7 +57,7 @@ function corpoIncoerente(corpo: Uint8Array, tipo: string, url: readonly string[]
   return null;
 }
 
-export const USER_AGENT = 'interpels (+https://github.com/emossa/interpels)';
+export const USER_AGENT = 'interpellevole (+https://github.com/emossa/interpels)';
 
 export function creaClientHttp(opzioni: OpzioniHttp = {}): ClientHttp {
   const {

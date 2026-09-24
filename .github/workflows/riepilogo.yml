@@ -1,5 +1,5 @@
 # Il job quotidiano: raccoglie dalle Fonti e invia i Riepiloghi.
-# SPENTO finché la variabile di repository INTERPELS_ATTIVO non vale 'true': senza, ogni esecuzione salta il job.
+# SPENTO finché la variabile di repository INTERPELLEVOLE_ATTIVO non vale 'true': senza, ogni esecuzione salta il job.
 # Per accenderlo servono i secret DATABASE_URL, GMAIL_UTENTE, GMAIL_APP_PASSWORD (e, facoltativo, HEALTHCHECK_URL).
 name: Riepilogo
 
@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   riepilogo:
-    if: vars.INTERPELS_ATTIVO == 'true'
+    if: vars.INTERPELLEVOLE_ATTIVO == 'true'
     runs-on: ubuntu-latest
     # La prima raccolta legge 30 giorni di documenti (con OCR); le successive durano pochi minuti.
     timeout-minutes: 60

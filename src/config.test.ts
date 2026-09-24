@@ -33,7 +33,7 @@ test("l'elenco delle Province coincide con le sigle dell'elenco ISTAT dei comuni
 });
 
 function radiceConGruppi(gruppi: unknown): string {
-  const radice = mkdtempSync(join(tmpdir(), 'interpels-config-'));
+  const radice = mkdtempSync(join(tmpdir(), 'interpellevole-config-'));
   cpSync(join(RADICE_PROGETTO, 'config'), join(radice, 'config'), { recursive: true });
   cpSync(join(RADICE_PROGETTO, 'data', 'province.csv'), join(radice, 'data', 'province.csv'));
   writeFileSync(join(radice, 'config', 'gruppi.json'), JSON.stringify(gruppi));

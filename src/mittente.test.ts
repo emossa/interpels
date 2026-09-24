@@ -8,7 +8,7 @@ import { FakeMittente, FileMittente, nomeFile, type Messaggio } from './mittente
 const messaggio: Messaggio = { a: 'Persona@Example.org', oggetto: 'Interpelli: 1 nuovo · 24 set 2026', html: '<p>ciao</p>', testo: 'ciao\n' };
 
 test('FileMittente scrive HTML e testo, con l\'oggetto in testa al testo, creando la cartella', async (t) => {
-  const radice = mkdtempSync(join(tmpdir(), 'interpels-mittente-'));
+  const radice = mkdtempSync(join(tmpdir(), 'interpellevole-mittente-'));
   t.after(() => rmSync(radice, { recursive: true, force: true }));
   const cartella = join(radice, '2026-09-24');
   await new FileMittente(cartella).invia(messaggio);
