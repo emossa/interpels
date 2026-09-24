@@ -5,7 +5,7 @@ import { migrate } from 'drizzle-orm/pglite/migrator';
 import { CARTELLA_MIGRAZIONI } from './index.ts';
 import { creaDbDiTest } from './test-db.ts';
 
-test('le migrazioni si applicano su PGlite e creano le tabelle di Destinatari e Preferenze', async (t) => {
+test('le migrazioni si applicano su PGlite e creano le tabelle', async (t) => {
   const { client, chiudi } = await creaDbDiTest();
   t.after(chiudi);
 
@@ -14,7 +14,7 @@ test('le migrazioni si applicano su PGlite e creano le tabelle di Destinatari e 
   );
   assert.deepEqual(
     rows.map((r) => r.table_name),
-    ['destinatario', 'preferenza'],
+    ['destinatario', 'interpello', 'preferenza', 'pubblicazione', 'pubblicazione_interpello'],
   );
 
   // Riapplicarle non fa nulla: quelle già applicate sono registrate.
@@ -38,4 +38,26 @@ test('il database impone che attivo e disattivato_il siano coerenti', async (t) 
     client.query("insert into destinatario (email, attivo) values ('persona@example.org', false)"),
     /destinatario_disattivazione_coerente/,
   );
+});
+
+test('il database rifiuta due Pubblicazioni con la stessa chiave sulla stessa Fonte', async (t) => {
+  const { client, chiudi } = await creaDbDiTest();
+  t.after(chiudi);
+  const inserisci = (fonte: string) =>
+    client.query(
+      `insert into pubblicazione (fonte, chiave, url, intestazione, pubblicata_il, documenti)
+       values ($1, '1', 'https://x.it/1', 'Interpello', now(), '[]')`,
+      [fonte],
+    );
+  await inserisci('a');
+  await inserisci('b');
+  await assert.rejects(inserisci('a'), /pubblicazione_fonte_chiave/);
+});
+
+test('il database accetta solo Tipi e Personale del glossario', async (t) => {
+  const { client, chiudi } = await creaDbDiTest();
+  t.after(chiudi);
+  await client.query("insert into interpello (tipo, personale) values ('esito', 'ata-dsga')");
+  await assert.rejects(client.query("insert into interpello (tipo, personale) values ('altro', 'docente')"), /interpello_tipo_valido/);
+  await assert.rejects(client.query("insert into interpello (tipo, personale) values ('interpello', 'ata')"), /interpello_personale_valido/);
 });

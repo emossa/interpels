@@ -1,0 +1,789 @@
+[
+  {
+    "url": "https://www.uspbari.it/usp/wp-json/wp/v2/posts?search=interpell&after=2026-09-17T06%3A21%3A31Z&orderby=date&order=desc&per_page=10&page=1&_fields=id%2Cdate_gmt%2Clink%2Ctitle%2Ccontent",
+    "stato": 200,
+    "intestazioni": {
+      "content-type": "application/json; charset=UTF-8",
+      "x-wp-total": "8",
+      "x-wp-totalpages": "1"
+    },
+    "corpo": [
+      {
+        "id": 74394,
+        "date": "2026-09-24T08:21:31",
+        "date_gmt": "2026-09-24T06:21:31",
+        "guid": {
+          "rendered": "http://www.uspbari.it/usp/?p=74394"
+        },
+        "modified": "2026-09-24T08:21:31",
+        "modified_gmt": "2026-09-24T06:21:31",
+        "slug": "interpello-per-supplenza-scuola-primaria-sostegno-adee-con-titolo-di-specializzazione-i-c-de-gasperi-pende-noicattaro",
+        "status": "publish",
+        "type": "post",
+        "link": "https://www.uspbari.it/usp/interpello-per-supplenza-scuola-primaria-sostegno-adee-con-titolo-di-specializzazione-i-c-de-gasperi-pende-noicattaro.html",
+        "title": {
+          "rendered": "Interpello per supplenza scuola primaria sostegno ADEE &#8211; con titolo di specializzazione. I.C. &#8220;De Gasperi-Pende&#8221;, Noicattaro"
+        },
+        "content": {
+          "rendered": "<p><a href=\"https://www.uspbari.it/usp/wp-content/uploads/2026/09/C1-24-09-2026.pdf\">Interpello prot. 8494 del 24-09-2026</a></p>\n<p><a href=\"https://www.uspbari.it/usp/wp-content/uploads/2026/09/DICHIARAZIONE-MESSA-A-DISPOSIZIONE-INTERPELLO.doc\">Allegato</a></p>\n",
+          "protected": false
+        },
+        "excerpt": {
+          "rendered": "<p>Interpello prot. 8494 del 24-09-2026 Allegato</p>\n",
+          "protected": false
+        },
+        "author": 30,
+        "featured_media": 0,
+        "comment_status": "closed",
+        "ping_status": "closed",
+        "sticky": false,
+        "template": "",
+        "format": "standard",
+        "meta": [],
+        "categories": [
+          5
+        ],
+        "tags": [
+          13
+        ],
+        "_links": {
+          "self": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74394"
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/types/post"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/users/30"
+            }
+          ],
+          "replies": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/comments?post=74394"
+            }
+          ],
+          "version-history": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74394/revisions"
+            }
+          ],
+          "wp:attachment": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/media?parent=74394"
+            }
+          ],
+          "wp:term": [
+            {
+              "taxonomy": "category",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/categories?post=74394"
+            },
+            {
+              "taxonomy": "post_tag",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/tags?post=74394"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 74369,
+        "date": "2026-09-23T14:47:56",
+        "date_gmt": "2026-09-23T12:47:56",
+        "guid": {
+          "rendered": "http://www.uspbari.it/usp/?p=74369"
+        },
+        "modified": "2026-09-23T14:47:56",
+        "modified_gmt": "2026-09-23T12:47:56",
+        "slug": "interpello-per-n-due-supplenze-su-classe-di-concorso-adee-sostegno-eh-scuola-primaria-i-c-papa-giovanni-xxiii-capozzi-galilei-valenzano-2",
+        "status": "publish",
+        "type": "post",
+        "link": "https://www.uspbari.it/usp/interpello-per-n-due-supplenze-su-classe-di-concorso-adee-sostegno-eh-scuola-primaria-i-c-papa-giovanni-xxiii-capozzi-galilei-valenzano-2.html",
+        "title": {
+          "rendered": "Interpello per n. due supplenze su classe di concorso ADEE &#8211; SOSTEGNO EH SCUOLA PRIMARIA- I.C. &#8220;Papa Giovanni XXIII-Capozzi– Galilei&#8221;, Valenzano"
+        },
+        "content": {
+          "rendered": "<p><a href=\"https://www.uspbari.it/usp/wp-content/uploads/2026/09/C3-23-09-2026.pdf\">Interpello prot.10711 del 23-09-2026</a></p>\n",
+          "protected": false
+        },
+        "excerpt": {
+          "rendered": "<p>Interpello prot.10711 del 23-09-2026</p>\n",
+          "protected": false
+        },
+        "author": 30,
+        "featured_media": 0,
+        "comment_status": "closed",
+        "ping_status": "closed",
+        "sticky": false,
+        "template": "",
+        "format": "standard",
+        "meta": [],
+        "categories": [
+          5
+        ],
+        "tags": [
+          13
+        ],
+        "_links": {
+          "self": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74369"
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/types/post"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/users/30"
+            }
+          ],
+          "replies": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/comments?post=74369"
+            }
+          ],
+          "version-history": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74369/revisions"
+            }
+          ],
+          "wp:attachment": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/media?parent=74369"
+            }
+          ],
+          "wp:term": [
+            {
+              "taxonomy": "category",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/categories?post=74369"
+            },
+            {
+              "taxonomy": "post_tag",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/tags?post=74369"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 74361,
+        "date": "2026-09-23T14:38:10",
+        "date_gmt": "2026-09-23T12:38:10",
+        "guid": {
+          "rendered": "http://www.uspbari.it/usp/?p=74361"
+        },
+        "modified": "2026-09-23T14:42:15",
+        "modified_gmt": "2026-09-23T12:42:15",
+        "slug": "interpello-per-n-due-supplenze-su-classe-di-concorso-adee-sostegno-eh-scuola-primaria-i-c-papa-giovanni-xxiii-capozzi-galilei-valenzano",
+        "status": "publish",
+        "type": "post",
+        "link": "https://www.uspbari.it/usp/interpello-per-n-due-supplenze-su-classe-di-concorso-adee-sostegno-eh-scuola-primaria-i-c-papa-giovanni-xxiii-capozzi-galilei-valenzano.html",
+        "title": {
+          "rendered": "Interpello richiesta posti primaria metodo Montessori. I.C. &#8220;G.Mazzini &#8211; G.Modugno&#8221;, Bari"
+        },
+        "content": {
+          "rendered": "<p><a href=\"http://www.uspbari.it/usp/wp-content/uploads/2026/09/C4-23-09-2026.pdf\">Interpello prot.14810 del 23-09-2026</a></p>\n",
+          "protected": false
+        },
+        "excerpt": {
+          "rendered": "<p>Interpello prot.14810 del 23-09-2026</p>\n",
+          "protected": false
+        },
+        "author": 30,
+        "featured_media": 0,
+        "comment_status": "closed",
+        "ping_status": "closed",
+        "sticky": false,
+        "template": "",
+        "format": "standard",
+        "meta": [],
+        "categories": [
+          5
+        ],
+        "tags": [
+          13
+        ],
+        "_links": {
+          "self": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74361"
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/types/post"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/users/30"
+            }
+          ],
+          "replies": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/comments?post=74361"
+            }
+          ],
+          "version-history": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74361/revisions"
+            }
+          ],
+          "wp:attachment": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/media?parent=74361"
+            }
+          ],
+          "wp:term": [
+            {
+              "taxonomy": "category",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/categories?post=74361"
+            },
+            {
+              "taxonomy": "post_tag",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/tags?post=74361"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 74358,
+        "date": "2026-09-23T12:36:26",
+        "date_gmt": "2026-09-23T10:36:26",
+        "guid": {
+          "rendered": "http://www.uspbari.it/usp/?p=74358"
+        },
+        "modified": "2026-09-23T12:36:26",
+        "modified_gmt": "2026-09-23T10:36:26",
+        "slug": "interpello-per-supplenza-breve-su-posto-sostegno-adee-scuola-primaria-istituto-comprensivo-statale-s-g-bosco-t-fiore-di-altamura-ba",
+        "status": "publish",
+        "type": "post",
+        "link": "https://www.uspbari.it/usp/interpello-per-supplenza-breve-su-posto-sostegno-adee-scuola-primaria-istituto-comprensivo-statale-s-g-bosco-t-fiore-di-altamura-ba.html",
+        "title": {
+          "rendered": "Interpello per supplenza breve su posto sostegno ADEE Scuola primaria &#8211; ISTITUTO COMPRENSIVO STATALE “S.G. BOSCO – T. FIORE” di Altamura (BA)"
+        },
+        "content": {
+          "rendered": "<p><a href=\"http://www.uspbari.it/usp/wp-content/uploads/2026/09/timbro_INTERPELLO-ADEE-signed.pdf\">Interpello prot. 7385 del 23/09/2026</a></p>\n",
+          "protected": false
+        },
+        "excerpt": {
+          "rendered": "<p>Interpello prot. 7385 del 23/09/2026</p>\n",
+          "protected": false
+        },
+        "author": 35,
+        "featured_media": 0,
+        "comment_status": "closed",
+        "ping_status": "closed",
+        "sticky": false,
+        "template": "",
+        "format": "standard",
+        "meta": [],
+        "categories": [
+          5
+        ],
+        "tags": [
+          53
+        ],
+        "_links": {
+          "self": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74358"
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/types/post"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/users/35"
+            }
+          ],
+          "replies": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/comments?post=74358"
+            }
+          ],
+          "version-history": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74358/revisions"
+            }
+          ],
+          "wp:attachment": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/media?parent=74358"
+            }
+          ],
+          "wp:term": [
+            {
+              "taxonomy": "category",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/categories?post=74358"
+            },
+            {
+              "taxonomy": "post_tag",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/tags?post=74358"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 74318,
+        "date": "2026-09-22T14:22:51",
+        "date_gmt": "2026-09-22T12:22:51",
+        "guid": {
+          "rendered": "http://www.uspbari.it/usp/?p=74318"
+        },
+        "modified": "2026-09-22T14:22:51",
+        "modified_gmt": "2026-09-22T12:22:51",
+        "slug": "interpello-per-nr-2-supplenze-su-classe-di-concorso-adee-con-titolo-abilitante-i-c-g-tauro-s-viterbo-castellana-grotte-ba",
+        "status": "publish",
+        "type": "post",
+        "link": "https://www.uspbari.it/usp/interpello-per-nr-2-supplenze-su-classe-di-concorso-adee-con-titolo-abilitante-i-c-g-tauro-s-viterbo-castellana-grotte-ba.html",
+        "title": {
+          "rendered": "Interpello per nr. 2 supplenze su classe di concorso ADEE con titolo abilitante &#8211; I.C. &#8220;G. Tauro &#8211; S. Viterbo&#8221; &#8211; Castellana Grotte (BA).&#8221;"
+        },
+        "content": {
+          "rendered": "<p><a href=\"http://www.uspbari.it/usp/wp-content/uploads/2026/09/Interpello.zip\">Interpello</a> prot. 7383 del 22/09/2026</p>\n",
+          "protected": false
+        },
+        "excerpt": {
+          "rendered": "<p>Interpello prot. 7383 del 22/09/2026</p>\n",
+          "protected": false
+        },
+        "author": 35,
+        "featured_media": 0,
+        "comment_status": "closed",
+        "ping_status": "closed",
+        "sticky": false,
+        "template": "",
+        "format": "standard",
+        "meta": [],
+        "categories": [
+          5
+        ],
+        "tags": [
+          53
+        ],
+        "_links": {
+          "self": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74318"
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/types/post"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/users/35"
+            }
+          ],
+          "replies": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/comments?post=74318"
+            }
+          ],
+          "version-history": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74318/revisions"
+            }
+          ],
+          "wp:attachment": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/media?parent=74318"
+            }
+          ],
+          "wp:term": [
+            {
+              "taxonomy": "category",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/categories?post=74318"
+            },
+            {
+              "taxonomy": "post_tag",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/tags?post=74318"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 74310,
+        "date": "2026-09-22T13:14:40",
+        "date_gmt": "2026-09-22T11:14:40",
+        "guid": {
+          "rendered": "http://www.uspbari.it/usp/?p=74310"
+        },
+        "modified": "2026-09-22T13:14:40",
+        "modified_gmt": "2026-09-22T11:14:40",
+        "slug": "interpello-per-supplenza-su-classe-di-concorso-adee-per-n-5-e-n-24-ore-settimanali-sostegno-scuola-primaria-con-titolo-abilitante-circolo-didattico-san-domenico-savio-tommaso-fi",
+        "status": "publish",
+        "type": "post",
+        "link": "https://www.uspbari.it/usp/interpello-per-supplenza-su-classe-di-concorso-adee-per-n-5-e-n-24-ore-settimanali-sostegno-scuola-primaria-con-titolo-abilitante-circolo-didattico-san-domenico-savio-tommaso-fi.html",
+        "title": {
+          "rendered": "Interpello per supplenza su classe di concorso ADEE per n. 5 e n.24 ore settimanali (Sostegno Scuola Primaria) con titolo abilitante. Circolo Didattico “San Domenico Savio – Tommaso Fiore”, Gravina in Puglia"
+        },
+        "content": {
+          "rendered": "<p><a href=\"https://www.uspbari.it/usp/wp-content/uploads/2026/09/C6-22-09-2026.pdf\">Interpello prot. 3390 del 22-09-2026</a></p>\n",
+          "protected": false
+        },
+        "excerpt": {
+          "rendered": "<p>Interpello prot. 3390 del 22-09-2026</p>\n",
+          "protected": false
+        },
+        "author": 30,
+        "featured_media": 0,
+        "comment_status": "closed",
+        "ping_status": "closed",
+        "sticky": false,
+        "template": "",
+        "format": "standard",
+        "meta": [],
+        "categories": [
+          5
+        ],
+        "tags": [
+          13
+        ],
+        "_links": {
+          "self": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74310"
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/types/post"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/users/30"
+            }
+          ],
+          "replies": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/comments?post=74310"
+            }
+          ],
+          "version-history": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74310/revisions"
+            }
+          ],
+          "wp:attachment": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/media?parent=74310"
+            }
+          ],
+          "wp:term": [
+            {
+              "taxonomy": "category",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/categories?post=74310"
+            },
+            {
+              "taxonomy": "post_tag",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/tags?post=74310"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 74295,
+        "date": "2026-09-22T11:01:17",
+        "date_gmt": "2026-09-22T09:01:17",
+        "guid": {
+          "rendered": "http://www.uspbari.it/usp/?p=74295"
+        },
+        "modified": "2026-09-22T11:01:17",
+        "modified_gmt": "2026-09-22T09:01:17",
+        "slug": "avviso-di-interpello-per-il-conferimento-di-n-due-supplenze-ai-sensi-dellart-14-c-22-o-m-272026-classe-di-concorso-adee-sostegno-eh-scuola-primaria-i-c-imbriani-piccarreta-corato",
+        "status": "publish",
+        "type": "post",
+        "link": "https://www.uspbari.it/usp/avviso-di-interpello-per-il-conferimento-di-n-due-supplenze-ai-sensi-dellart-14-c-22-o-m-272026-classe-di-concorso-adee-sostegno-eh-scuola-primaria-i-c-imbriani-piccarreta-corato.html",
+        "title": {
+          "rendered": "Avviso di interpello per il conferimento di n. due supplenze ai sensi dell&#8217;art. 14 c. 22 O.M.27/2026 &#8211; Classe di Concorso ADEE &#8211; SOSTEGNO EH SCUOLA PRIMARIA &#8211; I.C. &#8220;Imbriani Piccarreta&#8221;, Corato"
+        },
+        "content": {
+          "rendered": "<p><a href=\"https://www.uspbari.it/usp/wp-content/uploads/2026/09/C2-22-09-2026.pdf\">Interpello prot. 6080 del 22/09/2026</a></p>\n",
+          "protected": false
+        },
+        "excerpt": {
+          "rendered": "<p>Interpello prot. 6080 del 22/09/2026</p>\n",
+          "protected": false
+        },
+        "author": 30,
+        "featured_media": 0,
+        "comment_status": "closed",
+        "ping_status": "closed",
+        "sticky": false,
+        "template": "",
+        "format": "standard",
+        "meta": [],
+        "categories": [
+          5
+        ],
+        "tags": [
+          13
+        ],
+        "_links": {
+          "self": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74295"
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/types/post"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/users/30"
+            }
+          ],
+          "replies": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/comments?post=74295"
+            }
+          ],
+          "version-history": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74295/revisions"
+            }
+          ],
+          "wp:attachment": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/media?parent=74295"
+            }
+          ],
+          "wp:term": [
+            {
+              "taxonomy": "category",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/categories?post=74295"
+            },
+            {
+              "taxonomy": "post_tag",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/tags?post=74295"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      },
+      {
+        "id": 74248,
+        "date": "2026-09-18T12:30:40",
+        "date_gmt": "2026-09-18T10:30:40",
+        "guid": {
+          "rendered": "http://www.uspbari.it/usp/?p=74248"
+        },
+        "modified": "2026-09-18T12:30:40",
+        "modified_gmt": "2026-09-18T10:30:40",
+        "slug": "interpello-per-supplenza-su-classe-di-concorso-adaa-sostegno-scuola-infanzia-con-titolo-abilitante-a-s-2627-i-c-antenore-guaccero-palo-del-colle",
+        "status": "publish",
+        "type": "post",
+        "link": "https://www.uspbari.it/usp/interpello-per-supplenza-su-classe-di-concorso-adaa-sostegno-scuola-infanzia-con-titolo-abilitante-a-s-2627-i-c-antenore-guaccero-palo-del-colle.html",
+        "title": {
+          "rendered": "Interpello per supplenza su classe di concorso ADAA (Sostegno Scuola infanzia) con titolo abilitante A.S. 26/27. I.C. &#8220;Antenore-Guaccero&#8221;, Palo del colle"
+        },
+        "content": {
+          "rendered": "<p><a href=\"https://www.uspbari.it/usp/wp-content/uploads/2026/09/C3-18-09-2026-1.pdf\">Interpello prot. 5818 del 18-09-2026</a></p>\n",
+          "protected": false
+        },
+        "excerpt": {
+          "rendered": "<p>Interpello prot. 5818 del 18-09-2026</p>\n",
+          "protected": false
+        },
+        "author": 30,
+        "featured_media": 0,
+        "comment_status": "closed",
+        "ping_status": "closed",
+        "sticky": false,
+        "template": "",
+        "format": "standard",
+        "meta": [],
+        "categories": [
+          5
+        ],
+        "tags": [
+          14
+        ],
+        "_links": {
+          "self": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74248"
+            }
+          ],
+          "collection": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts"
+            }
+          ],
+          "about": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/types/post"
+            }
+          ],
+          "author": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/users/30"
+            }
+          ],
+          "replies": [
+            {
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/comments?post=74248"
+            }
+          ],
+          "version-history": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/posts/74248/revisions"
+            }
+          ],
+          "wp:attachment": [
+            {
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/media?parent=74248"
+            }
+          ],
+          "wp:term": [
+            {
+              "taxonomy": "category",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/categories?post=74248"
+            },
+            {
+              "taxonomy": "post_tag",
+              "embeddable": true,
+              "href": "https://www.uspbari.it/usp/wp-json/wp/v2/tags?post=74248"
+            }
+          ],
+          "curies": [
+            {
+              "name": "wp",
+              "href": "https://api.w.org/{rel}",
+              "templated": true
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

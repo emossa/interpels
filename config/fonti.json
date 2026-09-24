@@ -1,0 +1,11 @@
+[
+  {
+    "id": "usp-bari-post",
+    "nome": "USP Bari",
+    "adapter": "wordpress",
+    "impostazioni": {
+      "api": "https://www.uspbari.it/usp/wp-json/wp/v2/posts",
+      "cerca": "interpell"
+    }
+  }
+]

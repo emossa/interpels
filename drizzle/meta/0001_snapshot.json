@@ -1,0 +1,453 @@
+{
+  "id": "d40f87e2-b0d9-4f43-98c4-b5e0db21a591",
+  "prevId": "37960a4f-915b-4287-8882-edc87f0e816a",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.destinatario": {
+      "name": "destinatario",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "destinatario_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attivo": {
+          "name": "attivo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "disattivato_il": {
+          "name": "disattivato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "destinatario_email_unica": {
+          "name": "destinatario_email_unica",
+          "columns": [
+            {
+              "expression": "lower(\"email\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "destinatario_disattivazione_coerente": {
+          "name": "destinatario_disattivazione_coerente",
+          "value": "\"destinatario\".\"attivo\" = (\"destinatario\".\"disattivato_il\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.interpello": {
+      "name": "interpello",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "interpello_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "personale": {
+          "name": "personale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classi": {
+          "name": "classi",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "scuola": {
+          "name": "scuola",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "codice_meccanografico": {
+          "name": "codice_meccanografico",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "comune": {
+          "name": "comune",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provincia": {
+          "name": "provincia",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provincia_da": {
+          "name": "provincia_da",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "protocollo": {
+          "name": "protocollo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_protocollo": {
+          "name": "data_protocollo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "protocollo_riferito": {
+          "name": "protocollo_riferito",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ore": {
+          "name": "ore",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fino_al": {
+          "name": "fino_al",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "creato_il": {
+          "name": "creato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "aggiornato_il": {
+          "name": "aggiornato_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "interpello_tipo_valido": {
+          "name": "interpello_tipo_valido",
+          "value": "\"interpello\".\"tipo\" in ('interpello', 'annullamento', 'rettifica', 'riapertura', 'esito')"
+        },
+        "interpello_personale_valido": {
+          "name": "interpello_personale_valido",
+          "value": "\"interpello\".\"personale\" in ('docente', 'ata-dsga', 'altro')"
+        },
+        "interpello_provincia_da_coerente": {
+          "name": "interpello_provincia_da_coerente",
+          "value": "(\"interpello\".\"provincia\" is null) = (\"interpello\".\"provincia_da\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.preferenza": {
+      "name": "preferenza",
+      "schema": "",
+      "columns": {
+        "destinatario_id": {
+          "name": "destinatario_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "genere": {
+          "name": "genere",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "valore": {
+          "name": "valore",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "preferenza_destinatario_id_destinatario_id_fk": {
+          "name": "preferenza_destinatario_id_destinatario_id_fk",
+          "tableFrom": "preferenza",
+          "tableTo": "destinatario",
+          "columnsFrom": [
+            "destinatario_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "preferenza_destinatario_id_genere_valore_pk": {
+          "name": "preferenza_destinatario_id_genere_valore_pk",
+          "columns": [
+            "destinatario_id",
+            "genere",
+            "valore"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "preferenza_genere_valido": {
+          "name": "preferenza_genere_valido",
+          "value": "\"preferenza\".\"genere\" in ('classe', 'gruppo', 'provincia')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.pubblicazione": {
+      "name": "pubblicazione",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "pubblicazione_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "fonte": {
+          "name": "fonte",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chiave": {
+          "name": "chiave",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "intestazione": {
+          "name": "intestazione",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pubblicata_il": {
+          "name": "pubblicata_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "documenti": {
+          "name": "documenti",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "letta_il": {
+          "name": "letta_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "aggiornata_il": {
+          "name": "aggiornata_il",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "pubblicazione_fonte_chiave": {
+          "name": "pubblicazione_fonte_chiave",
+          "columns": [
+            {
+              "expression": "fonte",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "chiave",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.pubblicazione_interpello": {
+      "name": "pubblicazione_interpello",
+      "schema": "",
+      "columns": {
+        "pubblicazione_id": {
+          "name": "pubblicazione_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interpello_id": {
+          "name": "interpello_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pubblicazione_interpello_pubblicazione_id_pubblicazione_id_fk": {
+          "name": "pubblicazione_interpello_pubblicazione_id_pubblicazione_id_fk",
+          "tableFrom": "pubblicazione_interpello",
+          "tableTo": "pubblicazione",
+          "columnsFrom": [
+            "pubblicazione_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "pubblicazione_interpello_interpello_id_interpello_id_fk": {
+          "name": "pubblicazione_interpello_interpello_id_interpello_id_fk",
+          "tableFrom": "pubblicazione_interpello",
+          "tableTo": "interpello",
+          "columnsFrom": [
+            "interpello_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pubblicazione_interpello_pubblicazione_id_interpello_id_pk": {
+          "name": "pubblicazione_interpello_pubblicazione_id_interpello_id_pk",
+          "columns": [
+            "pubblicazione_id",
+            "interpello_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
