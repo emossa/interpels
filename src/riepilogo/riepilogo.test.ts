@@ -129,6 +129,24 @@ test('una notizia con più Classi volute compare una volta, sotto la prima; ordi
   );
 });
 
+test('un Possibile duplicato entra comunque, e dice se l\'altro è già stato inviato', () => {
+  const inviato = candidato({ pubblicataIl: '2026-09-22T08:00:00Z' });
+  const nonInviato = candidato({ pubblicataIl: '2026-09-22T09:00:00Z' });
+  const dove = (c: Candidato) => ({ id: c.id, url: c.pubblicazioni[0]!.url, fonte: 'USP Brindisi', pubblicataIl: c.pubblicazioni[0]!.pubblicataIl });
+  const duplicato = candidato({ possibiliDuplicati: [dove(inviato), dove(nonInviato)] });
+  const contenuto = componi(destinatario, [inviato, nonInviato, duplicato], new Set([inviato.id]), contesto)!;
+  const voci = contenuto.gruppi.flatMap((g) => g.voci);
+  assert.deepEqual(voci.map((v) => v.id), [nonInviato.id, duplicato.id]);
+  assert.deepEqual(
+    voci[1]!.possibiliDuplicati.map((d) => [d.id, d.giaInviato]),
+    [
+      [inviato.id, true],
+      [nonInviato.id, false],
+    ],
+  );
+  assert.deepEqual(voci[0]!.possibiliDuplicati, []);
+});
+
 test('giornoDiRoma usa il fuso di Roma', () => {
   assert.equal(giornoDiRoma(new Date('2026-09-23T22:30:00Z')), '2026-09-24');
   assert.equal(giornoDiRoma(new Date('2026-12-31T22:59:00Z')), '2026-12-31');
@@ -149,6 +167,14 @@ function contenutoCompleto() {
       scuola: 'Primo I.C.',
       comune: 'San Vito dei Normanni',
       pubblicataIl: '2026-09-23T07:00:00Z',
+      possibiliDuplicati: [
+        {
+          id: 999,
+          url: 'https://www.uspbari.it/usp/wp-content/uploads/2026/09/C1-22-09-2026.pdf',
+          fonte: 'USP Bari – Decreti',
+          pubblicataIl: new Date('2026-09-22T08:00:00Z'),
+        },
+      ],
     }),
     candidato({
       classi: ['A011', 'A012'],
@@ -177,7 +203,8 @@ function contenutoCompleto() {
       { fonte: 'USP Brindisi', url: 'javascript:alert(1)', pubblicataIl: new Date('2026-09-24T06:00:00Z'), documenti: [] },
     ] }),
   ];
-  return componi(destinatario, candidati, new Set(), contesto)!;
+  // L'Interpello 999, di cui la rettifica potrebbe essere un duplicato, è già stato inviato.
+  return componi(destinatario, candidati, new Set([999]), contesto)!;
 }
 
 test('oggetto: conteggio, Classi e data', () => {

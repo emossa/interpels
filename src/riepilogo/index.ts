@@ -1,17 +1,17 @@
 // Dai dati salvati ai Riepiloghi: per ogni Destinatario attivo, cosa ha di nuovo e il messaggio da inviare.
-import { eq, gte, inArray, min } from 'drizzle-orm';
+import { eq, gte, inArray, min, or } from 'drizzle-orm';
 import type { Configurazione } from '../config.ts';
 import { schema, type Db } from '../db/index.ts';
 import { elencaDestinatari } from '../destinatari.ts';
 import type { Messaggio } from '../mittente.ts';
 import type { AvvisiDelGiorno } from '../stato-fonti.ts';
-import { componi, GIORNI_ANTERIORI, type Candidato, type ContenutoRiepilogo } from './componi.ts';
+import { componi, GIORNI_ANTERIORI, type Candidato, type ContenutoRiepilogo, type PossibileDuplicato } from './componi.ts';
 import { giornoDiRoma, rendiRiepilogo } from './rendi.ts';
 
 export { giornoDiRoma } from './rendi.ts';
 
 const GIORNO = 24 * 60 * 60 * 1000;
-const { interpello, invio, pubblicazione, pubblicazioneInterpello } = schema;
+const { interpello, invio, possibileDuplicato, pubblicazione, pubblicazioneInterpello } = schema;
 
 export type RiepilogoPronto = {
   destinatarioId: number;
@@ -98,7 +98,41 @@ export async function caricaCandidati(db: Db, dal: Date, nomiFonti: ReadonlyMap<
     }
     c.pubblicazioni.push({ fonte: nomiFonti.get(p.fonte) ?? p.fonte, url: p.url, pubblicataIl: p.pubblicataIl, documenti: p.documenti });
   }
-  return [...perId.values()];
+  const duplicati = await possibiliDuplicati(db, [...perId.keys()], nomiFonti);
+  return [...perId.values()].map((c) => ({ ...c, possibiliDuplicati: duplicati.get(c.id) ?? [] }));
+}
+
+/** Per ogni Interpello dato, gli Interpelli di cui è un Possibile duplicato, con il link alla loro prima Pubblicazione. */
+async function possibiliDuplicati(db: Db, ids: number[], nomiFonti: ReadonlyMap<string, string>): Promise<Map<number, PossibileDuplicato[]>> {
+  const perId = new Map<number, PossibileDuplicato[]>();
+  if (ids.length === 0) return perId;
+  const coppie = await db
+    .select()
+    .from(possibileDuplicato)
+    .where(or(inArray(possibileDuplicato.interpelloA, ids), inArray(possibileDuplicato.interpelloB, ids)))
+    .orderBy(possibileDuplicato.interpelloA, possibileDuplicato.interpelloB);
+  if (coppie.length === 0) return perId;
+  const altri = [...new Set(coppie.flatMap((c) => [c.interpelloA, c.interpelloB]))];
+  const righe = await db
+    .select({ id: pubblicazioneInterpello.interpelloId, p: pubblicazione })
+    .from(pubblicazioneInterpello)
+    .innerJoin(pubblicazione, eq(pubblicazione.id, pubblicazioneInterpello.pubblicazioneId))
+    .where(inArray(pubblicazioneInterpello.interpelloId, altri))
+    .orderBy(pubblicazione.pubblicataIl, pubblicazione.id);
+  const dove = new Map<number, PossibileDuplicato>();
+  for (const { id, p } of righe) {
+    if (dove.has(id)) continue;
+    // Il primo documento della sua prima Pubblicazione, altrimenti la Pagina.
+    const url = p.documenti[0]?.url ?? p.url;
+    dove.set(id, { id, url, fonte: nomiFonti.get(p.fonte) ?? p.fonte, pubblicataIl: p.pubblicataIl });
+  }
+  for (const { interpelloA, interpelloB } of coppie) {
+    for (const [questo, altro] of [[interpelloA, interpelloB], [interpelloB, interpelloA]] as const) {
+      const d = dove.get(altro);
+      if (d) perId.set(questo, [...(perId.get(questo) ?? []), d]);
+    }
+  }
+  return perId;
 }
 
 async function giaInviati(db: Db, destinatarioId: number): Promise<Set<number>> {

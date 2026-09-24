@@ -102,6 +102,7 @@ test('salva le Pubblicazioni e un Interpello per ciascuna, con i campi dall\'int
       finoAl: null,
       // Qui la rete non c'è: il documento non si scarica e restano i campi dell'intestazione.
       documento: null,
+      impronta: null,
       documentoNonLetto: true,
       documentoNonLeggibile: false,
       discordanze: [],

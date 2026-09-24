@@ -17,6 +17,16 @@ export type PubblicazioneCandidata = {
   documenti: readonly DocumentoGrezzo[];
 };
 
+/** Un altro Interpello che potrebbe essere la stessa notizia: dove vederlo. */
+export type PossibileDuplicato = {
+  id: number;
+  /** Il suo documento, o la sua Pagina se non ne ha. */
+  url: string;
+  /** La Fonte e la data della sua prima Pubblicazione. */
+  fonte: string;
+  pubblicataIl: Date;
+};
+
 /** Un Interpello salvato, con le sue Pubblicazioni dalla prima all'ultima. */
 export type Candidato = {
   id: number;
@@ -33,9 +43,11 @@ export type Candidato = {
   /** La scadenza per candidarsi, quando è nota. */
   scadenza: Date | null;
   pubblicazioni: readonly PubblicazioneCandidata[];
+  /** Gli Interpelli di cui è un Possibile duplicato. */
+  possibiliDuplicati?: readonly PossibileDuplicato[];
 };
 
-export type Voce = Candidato & {
+export type Voce = Omit<Candidato, 'possibiliDuplicati'> & {
   /** La data di pubblicazione più antica tra le sue Pubblicazioni. */
   pubblicatoIl: Date;
   /** Il primo documento della prima Pubblicazione che ne ha. */
@@ -44,6 +56,8 @@ export type Voce = Candidato & {
   classiVolute: string[];
   /** Vuoto se l'Interpello è completo; altrimenti è Da verificare e dice cosa manca. */
   mancanti: string[];
+  /** Gli Interpelli di cui è un Possibile duplicato, e se sono già stati inviati a questo Destinatario. */
+  possibiliDuplicati: (PossibileDuplicato & { giaInviato: boolean })[];
 };
 
 export type GruppoRiepilogo = { classe: string; nome: string; voci: Voce[] };
@@ -100,7 +114,8 @@ export function componi(
     if (!corrispondenza) continue;
 
     const documento = candidato.pubblicazioni.flatMap((p) => p.documenti)[0] ?? null;
-    const voce: Voce = { ...candidato, pubblicatoIl, documento, ...corrispondenza };
+    const possibiliDuplicati = (candidato.possibiliDuplicati ?? []).map((d) => ({ ...d, giaInviato: giaInviati.has(d.id) }));
+    const voce: Voce = { ...candidato, pubblicatoIl, documento, ...corrispondenza, possibiliDuplicati };
     if (voce.mancanti.length > 0) {
       daVerificare.push(voce);
     } else {

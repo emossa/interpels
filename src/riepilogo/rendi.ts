@@ -86,6 +86,16 @@ function collegamenti(voce: Voce): Collegamento[] {
   return link.filter((c) => /^https?:\/\//i.test(c.url));
 }
 
+/** La nota di un Possibile duplicato: con cosa potrebbe coincidere, e se quello è già stato inviato. */
+function notaDuplicato(d: Voce['possibiliDuplicati'][number]): { prima: string; etichetta: string; url: string | null; dopo: string } {
+  return {
+    prima: '↳ potrebbe essere lo stesso di: ',
+    etichetta: `${d.fonte}, pubblicato ${giornoBreve(d.pubblicataIl)}`,
+    url: /^https?:\/\//i.test(d.url) ? d.url : null,
+    dopo: d.giaInviato ? ' (già inviato)' : '',
+  };
+}
+
 /** Un'email di solo Avviso: per chi oggi non ha Interpelli nuovi ma deve sapere dei problemi delle Fonti. */
 export type ContenutoSoloAvvisi = {
   giorno: string;
@@ -134,6 +144,10 @@ function testoVoce(voce: Voce): string[] {
   for (const m of voce.mancanti) righe.push(`  ⚠ ${m}`);
   righe.push(`  Pubblicato ${giornoBreve(voce.pubblicatoIl)}`);
   for (const c of collegamenti(voce)) righe.push(`  ${c.etichetta}: ${c.url}`);
+  for (const d of voce.possibiliDuplicati) {
+    const n = notaDuplicato(d);
+    righe.push(`  ${n.prima}${n.etichetta}${n.url ? ` ${n.url}` : ''}${n.dopo}`);
+  }
   return righe;
 }
 
@@ -159,6 +173,7 @@ const STILE = {
   mancante: 'margin:2px 0 0;color:#9a6700',
   avvisi: 'margin:0 0 20px;padding:10px 12px;border:1px solid #d4a72c;border-radius:6px;background:#fff8c5;color:#1f2328',
   avviso: 'margin:0 0 4px',
+  duplicato: 'margin:2px 0 0;color:#424a53;font-style:italic',
   badge: 'display:inline-block;padding:0 6px;margin-right:6px;border-radius:3px;background:#fff1e5;color:#953800;font-size:12px;font-weight:bold',
   link: 'color:#0969da',
   piede: 'margin:28px 0 0;padding-top:8px;border-top:1px solid #d0d7de;color:#656d76;font-size:12px',
@@ -229,5 +244,10 @@ function htmlVoce(voce: Voce): string {
     (c) => `<a href="${escapeHtml(c.url)}" style="${STILE.link}">${escapeHtml(c.etichetta)}</a>`,
   );
   righe.push(`<p style="${STILE.riga}">${[`Pubblicato ${escapeHtml(giornoBreve(voce.pubblicatoIl))}`, ...link].join(' · ')}</p>`);
+  for (const d of voce.possibiliDuplicati) {
+    const n = notaDuplicato(d);
+    const etichetta = n.url ? `<a href="${escapeHtml(n.url)}" style="${STILE.link}">${escapeHtml(n.etichetta)}</a>` : escapeHtml(n.etichetta);
+    righe.push(`<p style="${STILE.duplicato}">${escapeHtml(n.prima)}${etichetta}${escapeHtml(n.dopo)}</p>`);
+  }
   return `<div style="${STILE.voce}">\n${righe.join('\n')}\n</div>`;
 }

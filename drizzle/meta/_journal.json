@@ -43,6 +43,13 @@
       "when": 1790248637653,
       "tag": "0005_documenti_composti",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790249511826,
+      "tag": "0006_fusione",
+      "breakpoints": true
     }
   ]
 }

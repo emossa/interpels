@@ -8,6 +8,7 @@ import { eAvviso, estraiDaDocumento, trovaRegioneOggetto, unisci, type Discordan
 import { estraiDaIntestazione, type DatiInterpello } from './estrazione/intestazione.ts';
 import type { Luoghi } from './estrazione/luoghi.ts';
 import type { Fonte } from './fonti.ts';
+import { aggiornaInterpello, collegaInterpello, improntaTesto } from './fusione.ts';
 import type { ClientHttp } from './http.ts';
 
 /** Alla prima lettura una Fonte dà questo storico, utile al confronto tra Fonti. */
@@ -210,8 +211,8 @@ export async function salvaPubblicazione(
       pubblicazioneId = nuova!.id;
     }
     await salvaDocumenti(tx, pubblicazioneId, grezza, letture, ora);
-    const dati = interpelliDaPubblicazione(grezza, luoghi, await documentiSalvati(tx, pubblicazioneId, grezza));
-    await salvaInterpelli(tx, pubblicazioneId, dati, esistente ? ora : null);
+    const documenti = await documentiSalvati(tx, pubblicazioneId, grezza);
+    await salvaInterpelli(tx, pubblicazioneId, interpelliDaPubblicazione(grezza, luoghi, documenti), documenti, esistente ? ora : null);
     return esistente ? 'aggiornata' : 'nuova';
   });
 }
@@ -303,25 +304,34 @@ async function documentiSalvati(tx: Tx, pubblicazioneId: number, grezza: Pubblic
 }
 
 /**
- * Crea gli Interpelli di una Pubblicazione nuova, oppure (con `aggiornatoIl`) aggiorna in ordine quelli
- * di una già salvata, creando i mancanti se ora ne annuncia di più.
+ * Collega gli Interpelli di una Pubblicazione nuova, oppure (con `aggiornatoIl`) aggiorna quelli di una già
+ * salvata, collegando i mancanti se ora ne annuncia di più. Un Interpello che è la stessa notizia di uno
+ * già salvato, anche da un'altra Fonte, si fonde con quello (vedi `fusione.ts`), che non si reinvia.
  */
-async function salvaInterpelli(tx: Tx, pubblicazioneId: number, dati: readonly InterpelloEstratto[], aggiornatoIl: Date | null) {
-  const collegati = aggiornatoIl
+async function salvaInterpelli(
+  tx: Tx,
+  pubblicazioneId: number,
+  dati: readonly InterpelloEstratto[],
+  documenti: readonly DocumentoSalvato[],
+  aggiornatoIl: Date | null,
+) {
+  const ora = aggiornatoIl ?? new Date();
+  const liberi = aggiornatoIl
     ? await tx
-        .select({ id: schema.pubblicazioneInterpello.interpelloId })
+        .select({ id: schema.pubblicazioneInterpello.interpelloId, documento: schema.interpello.documento })
         .from(schema.pubblicazioneInterpello)
+        .innerJoin(schema.interpello, eq(schema.interpello.id, schema.pubblicazioneInterpello.interpelloId))
         .where(eq(schema.pubblicazioneInterpello.pubblicazioneId, pubblicazioneId))
         .orderBy(schema.pubblicazioneInterpello.interpelloId)
     : [];
-  for (const [i, d] of dati.entries()) {
-    const collegato = collegati[i];
-    if (collegato && aggiornatoIl) {
-      await tx.update(schema.interpello).set({ ...colonneInterpello(d), aggiornatoIl }).where(eq(schema.interpello.id, collegato.id));
-    } else {
-      const [creato] = await tx.insert(schema.interpello).values(colonneInterpello(d)).returning({ id: schema.interpello.id });
-      await tx.insert(schema.pubblicazioneInterpello).values({ pubblicazioneId, interpelloId: creato!.id });
-    }
+  for (const d of dati) {
+    const testo = documenti.find((doc) => d.documento && doc.hash === d.documento)?.testo ?? null;
+    const colonne = { ...colonneInterpello(d), impronta: improntaTesto(testo) };
+    // Ogni avviso ritrova il suo Interpello dal documento; gli altri in ordine.
+    const posizione = Math.max(0, liberi.findIndex((c) => d.documento && c.documento === d.documento));
+    const [collegato] = liberi.splice(posizione, 1);
+    if (collegato) await aggiornaInterpello(tx, collegato.id, pubblicazioneId, colonne, ora);
+    else await collegaInterpello(tx, pubblicazioneId, colonne, ora);
   }
 }
 
@@ -341,8 +351,8 @@ export async function rileggi(db: Db, luoghi: Luoghi): Promise<number> {
       documenti: p.documenti,
     };
     await db.transaction(async (tx) => {
-      const dati = interpelliDaPubblicazione(grezza, luoghi, await documentiSalvati(tx, p.id, grezza));
-      await salvaInterpelli(tx, p.id, dati, ora);
+      const documenti = await documentiSalvati(tx, p.id, grezza);
+      await salvaInterpelli(tx, p.id, interpelliDaPubblicazione(grezza, luoghi, documenti), documenti, ora);
     });
   }
   return pubblicazioni.length;

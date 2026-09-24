@@ -96,6 +96,8 @@ export const interpello = pgTable(
     finoAl: text('fino_al'),
     /** L'hash del documento (l'avviso) da cui vengono i campi che vincono sull'intestazione. */
     documento: text().references(() => documento.hash),
+    /** L'impronta del testo dell'avviso, uguale per le sue copie inoltrate con un'altra segnatura: vedi `fusione.ts`. */
+    impronta: text(),
     /** Nessun avviso letto (documento non scaricabile, illeggibile o assente): i campi vengono dalla sola intestazione. */
     documentoNonLetto: boolean('documento_non_letto').notNull().default(false),
     /**
@@ -271,4 +273,24 @@ export const documentoParte = pgTable(
       .references(() => documento.hash),
   },
   (t) => [primaryKey({ columns: [t.archivio, t.posizione] })],
+);
+
+/**
+ * Due Interpelli che forse sono la stessa notizia, ma troppo debolmente per fonderli: restano entrambi,
+ * ciascuno segnato come Possibile duplicato dell'altro. Una riga per coppia, con `interpello_a` < `interpello_b`.
+ */
+export const possibileDuplicato = pgTable(
+  'possibile_duplicato',
+  {
+    interpelloA: integer('interpello_a')
+      .notNull()
+      .references(() => interpello.id, { onDelete: 'cascade' }),
+    interpelloB: integer('interpello_b')
+      .notNull()
+      .references(() => interpello.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.interpelloA, t.interpelloB] }),
+    check('possibile_duplicato_ordinato', sql`${t.interpelloA} < ${t.interpelloB}`),
+  ],
 );
