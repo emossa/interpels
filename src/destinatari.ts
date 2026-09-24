@@ -15,16 +15,20 @@ export type Destinatario = {
   attivo: boolean;
   creatoIl: Date;
   disattivatoIl: Date | null;
+  /** Riceve un Riepilogo per Provincia invece di uno solo. */
+  separaProvince: boolean;
   preferenze: Preferenze;
 };
 
 export type NuovoDestinatario = {
   email: string;
   preferenze: Preferenze;
+  /** Un Riepilogo per Provincia; di norma no. */
+  separaProvince?: boolean;
 };
 
 /** Ciò che `modifica` cambia; i campi assenti restano come sono. */
-export type Modifiche = Partial<Preferenze> & { email?: string };
+export type Modifiche = Partial<Preferenze> & { email?: string; separaProvince?: boolean };
 
 export async function aggiungiDestinatario(
   db: Db,
@@ -35,7 +39,7 @@ export async function aggiungiDestinatario(
   const preferenze = validaPreferenze(nuovo.preferenze, configurazione);
   const id = await db.transaction(async (tx) => {
     await verificaEmailLibera(tx, email);
-    const [riga] = await tx.insert(destinatario).values({ email }).returning({ id: destinatario.id });
+    const [riga] = await tx.insert(destinatario).values({ email, separaProvince: nuovo.separaProvince ?? false }).returning({ id: destinatario.id });
     if (!riga) throw new Error('inserimento del Destinatario fallito');
     await scriviPreferenze(tx, riga.id, preferenze);
     return riga.id;
@@ -73,6 +77,9 @@ export async function modificaDestinatario(
     if (nuovaEmail !== attuale.email) {
       await verificaEmailLibera(tx, nuovaEmail, attuale.id);
       await tx.update(destinatario).set({ email: nuovaEmail }).where(eq(destinatario.id, attuale.id));
+    }
+    if (modifiche.separaProvince !== undefined && modifiche.separaProvince !== attuale.separaProvince) {
+      await tx.update(destinatario).set({ separaProvince: modifiche.separaProvince }).where(eq(destinatario.id, attuale.id));
     }
     await tx.delete(preferenza).where(eq(preferenza.destinatarioId, attuale.id));
     await scriviPreferenze(tx, attuale.id, preferenze);

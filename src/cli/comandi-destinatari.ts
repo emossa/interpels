@@ -13,14 +13,16 @@ import {
 import { ErroreValidazione } from '../preferenze.ts';
 
 export const USO = `Uso:
-  pnpm destinatari aggiungi <email> [--classi A011,AM12] [--gruppi "Sostegno secondaria"] --province BA,BR
+  pnpm destinatari aggiungi <email> [--classi A011,AM12] [--gruppi "Sostegno secondaria"] --province BA,BR [--separa-province]
   pnpm destinatari elenco
-  pnpm destinatari modifica <email> [--email <nuova>] [--classi ...] [--gruppi ...] [--province ...]
+  pnpm destinatari modifica <email> [--email <nuova>] [--classi ...] [--gruppi ...] [--province ...] [--[no-]separa-province]
   pnpm destinatari disattiva <email>
 
 Le opzioni accettano valori separati da virgola o ripetuti. In "modifica" sostituiscono
 i valori attuali (un valore vuoto, es. --gruppi "", li svuota); quelle omesse restano come sono.
-Serve almeno una Classe di concorso o un Gruppo di classi, e almeno una Provincia.`;
+Serve almeno una Classe di concorso o un Gruppo di classi, e almeno una Provincia.
+--separa-province invia un Riepilogo per Provincia allo stesso indirizzo invece di uno solo;
+--no-separa-province torna a uno solo.`;
 
 export type Ambiente = {
   db: Db;
@@ -57,6 +59,7 @@ async function esegui(argv: readonly string[], { db, configurazione, scrivi }: A
       const aggiunto = await aggiungiDestinatario(db, configurazione, {
         email,
         preferenze: { classi: opzioni.classi ?? [], gruppi: opzioni.gruppi ?? [], province: opzioni.province ?? [] },
+        separaProvince: opzioni.separaProvince ?? false,
       });
       scrivi(`Aggiunto ${descrivi(aggiunto)}`);
       return;
@@ -93,21 +96,24 @@ function leggiArgomenti(argv: readonly string[], accetta: Accetta): { email: str
   const { values, positionals } = parseArgs({
     args: [...argv],
     allowPositionals: true,
+    // `--no-separa-province`.
+    allowNegative: true,
     options: {
-      ...(accetta.preferenze ? { classi: elenco, gruppi: elenco, province: elenco } : {}),
+      ...(accetta.preferenze ? { classi: elenco, gruppi: elenco, province: elenco, 'separa-province': { type: 'boolean' } } : {}),
       ...(accetta.nuovaEmail ? { email: { type: 'string' } } : {}),
     },
   });
   if (positionals.length !== (accetta.email ? 1 : 0)) {
     throw new ErroreUso(accetta.email ? "Indica l'email del Destinatario." : `Argomento inatteso: "${positionals[0]}"`);
   }
-  const valori = values as Record<string, string | string[] | undefined>;
+  const valori = values as Record<string, string | string[] | boolean | undefined>;
   const opzioni: Modifiche = {};
   for (const campo of ['classi', 'gruppi', 'province'] as const) {
     const grezzi = valori[campo];
     if (Array.isArray(grezzi)) opzioni[campo] = grezzi.flatMap((v) => v.split(',')).filter((v) => v.trim() !== '');
   }
   if (typeof valori['email'] === 'string') opzioni.email = valori['email'];
+  if (typeof valori['separa-province'] === 'boolean') opzioni.separaProvince = valori['separa-province'];
   return { email: positionals[0] ?? '', opzioni };
 }
 
@@ -125,6 +131,7 @@ function descrivi(d: Destinatario): string {
     `  Classi: ${elenco(d.preferenze.classi)}`,
     `  Gruppi: ${elenco(d.preferenze.gruppi)}`,
     `  Province: ${elenco(d.preferenze.province)}`,
+    ...(d.separaProvince ? ['  Un Riepilogo per Provincia'] : []),
   ].join('\n');
 }
 

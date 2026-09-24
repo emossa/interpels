@@ -48,7 +48,8 @@ function oggetto(contenuto: ContenutoRiepilogo): string {
   const n = totale(contenuto);
   const classi = classiDelRiepilogo(contenuto);
   const elenco = classi.length > 0 ? ` (${classi.join(', ')})` : '';
-  return `Interpelli: ${n} ${n === 1 ? 'nuovo' : 'nuovi'}${elenco} · ${giornoEsteso(contenuto.giorno)}`;
+  const provincia = contenuto.provincia ? ` ${contenuto.provincia}` : '';
+  return `Interpelli${provincia}: ${n} ${n === 1 ? 'nuovo' : 'nuovi'}${elenco} · ${giornoEsteso(contenuto.giorno)}`;
 }
 
 // ── Le parti di una voce, comuni a HTML e testo ──

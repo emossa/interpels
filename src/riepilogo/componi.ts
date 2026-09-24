@@ -74,6 +74,8 @@ export type ContenutoRiepilogo = {
   fontiLette: string[];
   /** I problemi delle Fonti (e le riprese), in un riquadro in cima. */
   avvisi: readonly Avviso[];
+  /** Per chi riceve un Riepilogo per Provincia: la Provincia di questo. Assente nel Riepilogo unico. */
+  provincia?: string;
 };
 
 export type DestinatarioDaServire = {
@@ -128,7 +130,7 @@ export function componi(
 
   const gruppi = [...perClasse]
     .map(([classe, voci]) => ({ classe, nome: contesto.classi.get(classe) ?? classe, voci: voci.sort(perScadenza) }))
-    .sort((a, b) => b.voci.length - a.voci.length || a.classe.localeCompare(b.classe));
+    .sort(perNumero);
   return {
     giorno: contesto.giorno,
     generatoIl: contesto.adesso,
@@ -137,6 +139,30 @@ export function componi(
     fontiLette: contesto.fontiLette,
     avvisi: contesto.avvisi,
   };
+}
+
+/**
+ * Il Riepilogo diviso per Provincia, per chi ne vuole uno per Provincia: ogni Interpello va in quello della sua
+ * Provincia, quelli senza Provincia (Da verificare) in tutti. Nell'ordine di `province`; nessuno per una
+ * Provincia senza nulla.
+ */
+export function perProvincia(contenuto: ContenutoRiepilogo, province: readonly string[]): ContenutoRiepilogo[] {
+  const riepiloghi: ContenutoRiepilogo[] = [];
+  for (const provincia of province) {
+    const gruppi = contenuto.gruppi
+      .map((g) => ({ ...g, voci: g.voci.filter((v) => v.provincia === provincia) }))
+      .filter((g) => g.voci.length > 0)
+      .sort(perNumero);
+    const daVerificare = contenuto.daVerificare.filter((v) => v.provincia === provincia || v.provincia === null);
+    if (gruppi.length === 0 && daVerificare.length === 0) continue;
+    riepiloghi.push({ ...contenuto, provincia, gruppi, daVerificare });
+  }
+  return riepiloghi;
+}
+
+/** Prima le Classi con più Interpelli, a parità per codice. */
+function perNumero(a: GruppoRiepilogo, b: GruppoRiepilogo): number {
+  return b.voci.length - a.voci.length || a.classe.localeCompare(b.classe);
 }
 
 /** Prima la scadenza più vicina; quelle senza scadenza nota dopo, per data di pubblicazione. */

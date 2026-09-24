@@ -23,7 +23,8 @@ export const USO_JOB = `Uso:
   quando un problema comincia, ogni 3 giorni finché dura e quando la Fonte si riprende.
 
   --solo-raccolta   legge le Fonti e salva Pubblicazioni e Interpelli, senza inviare Riepiloghi
-  --dry-run         raccoglie e scrive i Riepiloghi in out/<giorno>/<destinatario>.html|.txt,
+  --dry-run         raccoglie e scrive i Riepiloghi in out/<giorno>/<destinatario>.html|.txt
+                    (<destinatario>.<provincia>.html|.txt per chi ne riceve uno per Provincia),
                     senza inviarli né registrarli
   --fonte <id>      legge solo questa Fonte (vedi config/fonti.json)
   --rileggi         ricava di nuovo gli Interpelli dal testo salvato dei documenti, senza scaricare nulla`;

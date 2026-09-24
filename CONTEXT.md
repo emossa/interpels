@@ -71,7 +71,7 @@ The Classi di concorso and/or Gruppi di classi, and the Province, a Destinatario
 _Avoid_: filters, subscription, settings
 
 **Riepilogo**:
-The daily email to one Destinatario listing the matching Interpelli not yet sent to them; at most one per day, none when nothing matches. An Interpello is sent to a Destinatario at most once.
+The daily email to one Destinatario listing the matching Interpelli not yet sent to them; at most one per day, none when nothing matches. A Destinatario may opt in to one Riepilogo per Provincia instead, each naming its Provincia, with Interpelli lacking a Provincia in every one. An Interpello is sent to a Destinatario at most once.
 _Avoid_: digest, summary, newsletter, report
 
 **Avviso**:

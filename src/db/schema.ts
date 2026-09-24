@@ -1,7 +1,7 @@
 // Schema Drizzle. `pnpm db:generate` ne ricava le migrazioni SQL in `drizzle/`.
 // Ogni slice aggiunge qui le sue tabelle.
 import { sql } from 'drizzle-orm';
-import { boolean, check, date, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core';
+import { boolean, check, date, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex } from 'drizzle-orm/pg-core';
 import type { DocumentoGrezzo } from '../adapter/adapter.ts';
 import type { Discordanza } from '../estrazione/documento.ts';
 import type { Personale, Tipo } from '../estrazione/intestazione.ts';
@@ -16,6 +16,8 @@ export const destinatario = pgTable(
     creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
     /** Quando è stato disattivato; valorizzato se e solo se `attivo` è falso. */
     disattivatoIl: timestamp('disattivato_il', { withTimezone: true }),
+    /** Vuole un Riepilogo per Provincia, allo stesso indirizzo, invece di uno solo. */
+    separaProvince: boolean('separa_province').notNull().default(false),
   },
   (t) => [
     // Le email sono uniche senza distinguere maiuscole e minuscole.
@@ -132,8 +134,8 @@ export const pubblicazioneInterpello = pgTable(
 );
 
 /**
- * Un Riepilogo inviato: al massimo uno per Destinatario per giorno (Europe/Rome), registrato
- * solo dopo che il server di posta l'ha accettato. Le prove (`--dry-run`) non lo scrivono.
+ * Un Riepilogo inviato: al massimo uno per Destinatario per giorno (Europe/Rome), o uno per Provincia per chi
+ * ha `separa_province`; registrato solo dopo che il server di posta l'ha accettato. Le prove (`--dry-run`) non lo scrivono.
  */
 export const riepilogo = pgTable(
   'riepilogo',
@@ -144,9 +146,11 @@ export const riepilogo = pgTable(
       .references(() => destinatario.id, { onDelete: 'cascade' }),
     /** Il giorno del Riepilogo a Roma, `AAAA-MM-GG`. */
     giorno: date({ mode: 'string' }).notNull(),
+    /** La Provincia del Riepilogo, per chi ne riceve uno per Provincia; nulla per il Riepilogo unico. */
+    provincia: text(),
     inviatoIl: timestamp('inviato_il', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex('riepilogo_destinatario_giorno').on(t.destinatarioId, t.giorno)],
+  (t) => [unique('riepilogo_destinatario_giorno_provincia').on(t.destinatarioId, t.giorno, t.provincia).nullsNotDistinct()],
 );
 
 /** Quali Interpelli sono già stati inviati a ogni Destinatario, e con quale Riepilogo: al massimo una volta. */

@@ -1,5 +1,6 @@
-// L'invio vero dei Riepiloghi, idempotente: al massimo un Riepilogo per Destinatario per giorno (Roma),
-// e ogni Interpello al massimo una volta per Destinatario. Si registra solo ciò che SMTP ha accettato.
+// L'invio vero dei Riepiloghi, idempotente: al massimo un Riepilogo per Destinatario per giorno (Roma), o uno
+// per Provincia per chi li vuole separati, e ogni Interpello al massimo una volta per Destinatario.
+// Si registra solo ciò che SMTP ha accettato.
 import { eq } from 'drizzle-orm';
 import { schema, type Db } from '../db/index.ts';
 import type { Mittente } from '../mittente.ts';
@@ -12,7 +13,7 @@ export type EsitoInvii = {
   inviati: RiepilogoPronto[];
   /** I Riepiloghi rifiutati: nulla registrato, il prossimo job li ritenta. */
   falliti: { pronto: RiepilogoPronto; errore: string }[];
-  /** Quanti Destinatari avevano già ricevuto il Riepilogo di oggi. */
+  /** Quanti Riepiloghi con qualcosa di nuovo non partono perché quello di oggi (di quella Provincia) è già partito. */
   giaServiti: number;
 };
 
@@ -23,14 +24,19 @@ export type EsitoInvii = {
  */
 export async function inviaRiepiloghi(db: Db, mittente: Mittente, preparazione: Preparazione): Promise<EsitoInvii> {
   const giorno = giornoDiRoma(preparazione.adesso);
-  const serviti = new Set(
-    (await db.select({ id: riepilogo.destinatarioId }).from(riepilogo).where(eq(riepilogo.giorno, giorno))).map((r) => r.id),
-  );
+  const giaInviati = await db
+    .select({ id: riepilogo.destinatarioId, provincia: riepilogo.provincia })
+    .from(riepilogo)
+    .where(eq(riepilogo.giorno, giorno));
+  // Il Riepilogo unico copre ogni Provincia; il Riepilogo di una Provincia copre solo lei, ma chi è passato
+  // oggi a un Riepilogo solo non ne riceve un altro (il cambio vale da domani).
+  const serviti = (pronto: RiepilogoPronto) =>
+    giaInviati.some((r) => r.id === pronto.destinatarioId && (r.provincia === null || pronto.provincia === null || r.provincia === pronto.provincia));
   const pronti = await preparaRiepiloghi(db, preparazione);
 
   const esito: EsitoInvii = { inviati: [], falliti: [], giaServiti: 0 };
   for (const pronto of pronti) {
-    if (serviti.has(pronto.destinatarioId)) {
+    if (serviti(pronto)) {
       esito.giaServiti++;
       continue;
     }
@@ -50,8 +56,10 @@ async function registra(db: Db, pronto: RiepilogoPronto, giorno: string, adesso:
   await db.transaction(async (tx) => {
     const [riga] = await tx
       .insert(riepilogo)
-      .values({ destinatarioId: pronto.destinatarioId, giorno, inviatoIl: adesso })
+      .values({ destinatarioId: pronto.destinatarioId, giorno, provincia: pronto.provincia, inviatoIl: adesso })
       .returning({ id: riepilogo.id });
+    // Un Interpello senza Provincia sta nel Riepilogo di ogni Provincia: conta come inviato col primo accettato,
+    // e un Riepilogo ritentato più tardi non lo ripete.
     if (pronto.interpelli.length > 0) {
       await tx
         .insert(invio)

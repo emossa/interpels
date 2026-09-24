@@ -124,6 +124,35 @@ test('--dry-run scrive HTML e testo per chi ha Interpelli nuovi, niente per gli 
   assert.deepEqual(await db.select().from(schema.invio), []);
 });
 
+test('--dry-run scrive una coppia di file per ogni Riepilogo di Provincia', async (t) => {
+  const { db, ambiente, uscita, cartellaUscita } = await ambienteDiTest(t);
+  const d = await destinatarioAggiuntoIl(db, '2026-09-20T08:00:00Z', 'primaria@example.org', { classi: ['ADEE'], province: ['BA', 'BR'] });
+  await db.update(schema.destinatario).set({ separaProvince: true }).where(eq(schema.destinatario.id, d.id));
+  // Nel registrato ci sono solo scuole di Bari: un Interpello ADEE a Brindisi, da un'altra Fonte.
+  const [p] = await db
+    .insert(schema.pubblicazione)
+    .values({ fonte: 'usp-brindisi', chiave: '1', url: 'https://www.istruzionebrindisi.it/1/', intestazione: 'Interpello ADEE', pubblicataIl: new Date('2026-09-23T08:00:00Z'), documenti: [] })
+    .returning();
+  const [i] = await db
+    .insert(schema.interpello)
+    .values({ tipo: 'interpello', personale: 'docente', classi: ['ADEE'], scuola: 'I.C. Brindisi', provincia: 'BR', provinciaDa: 'sigla' })
+    .returning();
+  await db.insert(schema.pubblicazioneInterpello).values({ pubblicazioneId: p!.id, interpelloId: i!.id });
+
+  assert.equal(await eseguiJob(['--dry-run', '--fonte', 'usp-bari-post'], ambiente), 0);
+  const cartella = join(cartellaUscita, '2026-09-24');
+  assert.deepEqual(readdirSync(cartella).sort(), [
+    'primaria@example.org.BA.html',
+    'primaria@example.org.BA.txt',
+    'primaria@example.org.BR.html',
+    'primaria@example.org.BR.txt',
+  ]);
+  assert.match(readFileSync(join(cartella, 'primaria@example.org.BA.txt'), 'utf8'), /^Oggetto: Interpelli BA: 7 nuovi \(ADEE\) · 24 set 2026\n/);
+  assert.match(readFileSync(join(cartella, 'primaria@example.org.BR.txt'), 'utf8'), /^Oggetto: Interpelli BR: 1 nuovo \(ADEE\) · 24 set 2026\n/);
+  assert.match(uscita.at(-1)!, /^Prova: 2 Riepiloghi scritti in /);
+  assert.deepEqual(await db.select().from(schema.riepilogo), []);
+});
+
 test('--dry-run senza Interpelli nuovi non scrive file', async (t) => {
   const { db, ambiente, uscita, cartellaUscita } = await ambienteDiTest(t);
   // Aggiunto molto dopo le Pubblicazioni registrate: il limite dei 3 giorni le esclude tutte.

@@ -108,3 +108,28 @@ test('un comando sconosciuto o senza email mostra come si usa, con codice 2', as
     assert.match(errori, /pnpm destinatari aggiungi/);
   }
 });
+
+test('--separa-province chiede un Riepilogo per Provincia; modifica --no-separa-province torna a uno solo', async (t) => {
+  const { db, esegui } = await preparaCli(t);
+  const aggiunta = await esegui('aggiungi', 'p@example.org', '--classi', 'A011', '--province', 'BA,BR', '--separa-province');
+  assert.equal(aggiunta.codice, 0, aggiunta.errori);
+  assert.match(aggiunta.uscita, /Un Riepilogo per Provincia/);
+  assert.equal((await elencaDestinatari(db))[0]?.separaProvince, true);
+
+  // Una modifica che non la nomina la lascia com'è.
+  assert.equal((await esegui('modifica', 'p@example.org', '--classi', 'A012')).codice, 0);
+  assert.equal((await elencaDestinatari(db))[0]?.separaProvince, true);
+
+  const via = await esegui('modifica', 'p@example.org', '--no-separa-province');
+  assert.equal(via.codice, 0, via.errori);
+  assert.doesNotMatch(via.uscita, /Un Riepilogo per Provincia/);
+  assert.equal((await elencaDestinatari(db))[0]?.separaProvince, false);
+
+  assert.equal((await esegui('modifica', 'p@example.org', '--separa-province')).codice, 0);
+  assert.equal((await elencaDestinatari(db))[0]?.separaProvince, true);
+
+  // Chi non la chiede riceve un Riepilogo solo, come sempre; `elenco` non dice nulla di nuovo.
+  assert.equal((await esegui('aggiungi', 'q@example.org', '--classi', 'A011', '--province', 'BA')).codice, 0);
+  assert.equal((await elencaDestinatari(db)).find((d) => d.email === 'q@example.org')?.separaProvince, false);
+  assert.equal((await esegui('elenco')).uscita.match(/Un Riepilogo per Provincia/g)?.length, 1);
+});

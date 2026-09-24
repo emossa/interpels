@@ -2,7 +2,7 @@
 // `node --test --test-update-snapshots src/riepilogo/riepilogo.test.ts`.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { componi, type Candidato, type Contesto, type DestinatarioDaServire } from './componi.ts';
+import { componi, perProvincia, type Candidato, type Contesto, type DestinatarioDaServire } from './componi.ts';
 import { escapeHtml, giornoDiRoma, rendiRiepilogo, rendiSoloAvvisi } from './rendi.ts';
 
 const contesto: Contesto = {
@@ -251,4 +251,45 @@ test('email di solo Avviso', (t) => {
   assert.equal(resa.oggetto, 'Interpelli: avviso sulle fonti · 24 set 2026');
   assert.doesNotMatch(resa.html, /<Brindisi>/);
   t.assert.snapshot(resa, { serializers: [(r: { testo: string; html: string }) => `\n${r.testo}\n${r.html}`] });
+});
+
+// ── Un Riepilogo per Provincia ──
+
+test('perProvincia: ogni Interpello nel Riepilogo della sua Provincia, quelli senza Provincia in tutti', () => {
+  const ba1 = candidato({ provincia: 'BA', comune: 'Bari' });
+  const ba2 = candidato({ provincia: 'BA', comune: 'Bari' });
+  const br1 = candidato({ classi: ['A011'] });
+  const br2 = candidato({ classi: ['A011'] });
+  const brAdmm = candidato({});
+  const senzaProvincia = candidato({ provincia: null, comune: null });
+  const senzaClasseBa = candidato({ classi: [], provincia: 'BA', comune: 'Bari' });
+  const contenuto = componi(destinatario, [ba1, ba2, br1, br2, brAdmm, senzaProvincia, senzaClasseBa], new Set(), contesto)!;
+  assert.deepEqual(contenuto.gruppi.map((g) => g.classe), ['ADMM', 'A011']);
+
+  const riepiloghi = perProvincia(contenuto, ['BA', 'BR']);
+  assert.deepEqual(
+    riepiloghi.map((r) => [r.provincia, r.gruppi.map((g) => [g.classe, g.voci.map((v) => v.id)]), r.daVerificare.map((v) => v.id)]),
+    [
+      ['BA', [['ADMM', [ba1.id, ba2.id]]], [senzaProvincia.id, senzaClasseBa.id]],
+      // I gruppi si riordinano nel Riepilogo della Provincia: qui A011 ne ha più di ADMM.
+      ['BR', [['A011', [br1.id, br2.id]], ['ADMM', [brAdmm.id]]], [senzaProvincia.id]],
+    ],
+  );
+  assert.ok(riepiloghi.every((r) => r.avvisi === contenuto.avvisi && r.giorno === contenuto.giorno));
+});
+
+test('perProvincia: una Provincia senza nulla di nuovo non ha Riepilogo, a meno di Interpelli senza Provincia', () => {
+  const soloBr = componi(destinatario, [candidato({})], new Set(), contesto)!;
+  assert.deepEqual(perProvincia(soloBr, ['BA', 'BR']).map((r) => r.provincia), ['BR']);
+  const senzaProvincia = componi(destinatario, [candidato({ provincia: null, comune: null })], new Set(), contesto)!;
+  assert.deepEqual(perProvincia(senzaProvincia, ['BA', 'BR']).map((r) => r.provincia), ['BA', 'BR']);
+});
+
+test("l'oggetto del Riepilogo di una Provincia la nomina", () => {
+  const contenuto = componi(destinatario, [candidato({}), candidato({ classi: [], provincia: null, comune: null })], new Set(), contesto)!;
+  const [br] = perProvincia(contenuto, ['BR']);
+  const resa = rendiRiepilogo(br!);
+  assert.equal(resa.oggetto, 'Interpelli BR: 2 nuovi (ADMM) · 24 set 2026');
+  assert.match(resa.html, /<title>Interpelli BR: 2 nuovi/);
+  assert.match(resa.testo, /── Da verificare/);
 });
