@@ -1,0 +1,71 @@
+# Il job quotidiano: raccoglie dalle Fonti e invia i Riepiloghi.
+# SPENTO finché la variabile di repository INTERPELS_ATTIVO non vale 'true': senza, ogni esecuzione salta il job.
+# Per accenderlo servono i secret DATABASE_URL, GMAIL_UTENTE, GMAIL_APP_PASSWORD (e, facoltativo, HEALTHCHECK_URL).
+name: Riepilogo
+
+on:
+  schedule:
+    # Orari UTC. 06:40 a Roma è 04:40 UTC con l'ora legale e 05:40 UTC senza; 08:10 (riserva) è 06:10 o 07:10.
+    # Al massimo un Riepilogo al giorno per Destinatario: le esecuzioni dopo la prima riuscita raccolgono
+    # e ritentano solo gli invii falliti.
+    - cron: '40 4,5 * * *'
+    - cron: '10 6,7 * * *'
+  workflow_dispatch:
+
+# Due esecuzioni non si sovrappongono mai: la seconda aspetta la fine della prima.
+concurrency:
+  group: riepilogo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  # Per riabilitare il workflow a ogni esecuzione (vedi l'ultimo passo).
+  actions: write
+
+jobs:
+  riepilogo:
+    if: vars.INTERPELS_ATTIVO == 'true'
+    runs-on: ubuntu-latest
+    # La prima raccolta legge 30 giorni di documenti (con OCR); le successive durano pochi minuti.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      # poppler (pdftotext, pdftoppm) legge i PDF, tesseract con il modello italiano le scansioni.
+      # Senza, ogni documento ricadrebbe in silenzio sulla sola intestazione.
+      - name: Strumenti per i documenti
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-ita
+      - run: pnpm install --frozen-lockfile
+      - name: Migrazioni
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # Esce con 1 (esecuzione rossa, e GitHub avvisa il proprietario) se una Fonte è in errore o un invio
+      # è fallito, dopo aver inviato comunque il resto.
+      - name: Raccolta e invio
+        run: pnpm job
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GMAIL_UTENTE: ${{ secrets.GMAIL_UTENTE }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+      # Dead man's switch su healthchecks.io: solo dopo un job riuscito; se per 26 ore non arriva, avvisa il proprietario.
+      - name: Ping healthcheck
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: |
+          if [ -z "$HEALTHCHECK_URL" ]; then
+            echo "HEALTHCHECK_URL non impostato: nessun ping."
+            exit 0
+          fi
+          curl -fsS -m 10 --retry 5 -o /dev/null "$HEALTHCHECK_URL"
+      # GitHub disattiva i workflow pianificati di un repo senza attività da 60 giorni: riabilitarlo a ogni
+      # esecuzione (anche fallita) azzera il conto, senza commit. Usa solo il token dell'esecuzione.
+      - name: Keepalive
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api --method PUT "repos/${{ github.repository }}/actions/workflows/riepilogo.yml/enable"

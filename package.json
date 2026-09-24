@@ -15,7 +15,8 @@
     "db:migrate": "node --env-file-if-exists=.env src/db/migra.ts",
     "db:migrate:produzione": "node --env-file=.env.produzione src/db/migra.ts",
     "destinatari": "node --env-file=.env.produzione src/cli/destinatari.ts",
-    "job": "node --env-file-if-exists=.env src/cli/job.ts"
+    "job": "node --env-file-if-exists=.env src/cli/job.ts",
+    "check:fonti": "node src/cli/check-fonti.ts"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
