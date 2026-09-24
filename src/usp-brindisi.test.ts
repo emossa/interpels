@@ -130,7 +130,11 @@ test('--solo-raccolta --fonte usp-brindisi salva Pubblicazioni e Interpelli, con
     scriviErrore: (testo) => errori.push(testo),
   });
 
-  assert.deepEqual([codice, uscita, errori], [0, ['usp-brindisi: 2 lette, 2 nuove, 0 aggiornate'], []]);
+  // I due post registrati sono del febbraio 2025: letti oggi, la Fonte risulta in silenzio (solo un avvertimento).
+  assert.deepEqual(
+    [codice, uscita, errori],
+    [0, ['usp-brindisi: 2 lette, 2 nuove, 0 aggiornate'], ['usp-brindisi: attenzione: silenzio (ultima Pubblicazione del 2025-02-11)']],
+  );
   // Ogni documento è stato respinto una volta (HTML al posto del PDF) e poi scaricato, uno alla volta.
   const download = richiesti.filter((u) => u.includes('?download='));
   assert.equal(download.length, 4);
