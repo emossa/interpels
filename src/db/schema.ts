@@ -98,6 +98,11 @@ export const interpello = pgTable(
     documento: text().references(() => documento.hash),
     /** Nessun avviso letto (documento non scaricabile, illeggibile o assente): i campi vengono dalla sola intestazione. */
     documentoNonLetto: boolean('documento_non_letto').notNull().default(false),
+    /**
+     * Nessun avviso letto e almeno un documento scaricato ma non leggibile (7z, scansione illeggibile…):
+     * l'avviso potrebbe essere lì. L'Interpello è Da verificare, con "documento non leggibile".
+     */
+    documentoNonLeggibile: boolean('documento_non_leggibile').notNull().default(false),
     /** Dove intestazione e documento non concordano; interne, per la messa a punto, mai nel Riepilogo. */
     discordanze: jsonb().$type<Discordanza[]>().notNull().default(sql`'[]'::jsonb`),
     creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
@@ -169,11 +174,11 @@ export const documento = pgTable('documento', {
   /** Il content-type con cui è arrivato. */
   tipo: text().notNull(),
   dimensione: integer().notNull(),
-  /** Il testo della pagina 1; null se non si è potuto leggere. */
+  /** Il testo della pagina 1; null se non si è potuto leggere o è un archivio (le sue parti in `documento_parte`). */
   testo: text(),
   /** La riga dell'Oggetto e le seguenti, anche se fuori dalla pagina 1. */
   regioneOggetto: text('regione_oggetto'),
-  /** Perché il testo manca o è inservibile (scansione, formato non ancora letto…). */
+  /** Perché il testo manca: "documento non leggibile: …" (7z, scansione illeggibile…); null anche per un archivio letto. */
   errore: text(),
   creatoIl: timestamp('creato_il', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -245,4 +250,25 @@ export const avviso = pgTable(
     inviatoIl: timestamp('inviato_il', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex('avviso_destinatario_giorno').on(t.destinatarioId, t.giorno)],
+);
+
+/**
+ * I documenti dentro un archivio (ZIP), letti ciascuno come documento a sé: una proprietà del contenuto
+ * dell'archivio, salvata una volta per suo hash. Gli archivi dentro l'archivio sono già spianati:
+ * `nome` è il percorso completo (`altri.zip/avviso.pdf`).
+ */
+export const documentoParte = pgTable(
+  'documento_parte',
+  {
+    archivio: text()
+      .notNull()
+      .references(() => documento.hash, { onDelete: 'cascade' }),
+    /** L'ordine del file nell'archivio. */
+    posizione: integer().notNull(),
+    nome: text().notNull(),
+    parte: text()
+      .notNull()
+      .references(() => documento.hash),
+  },
+  (t) => [primaryKey({ columns: [t.archivio, t.posizione] })],
 );

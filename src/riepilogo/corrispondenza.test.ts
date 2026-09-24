@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { confronta, espandiPreferenze, MANCA_CLASSE, MANCA_PROVINCIA, type DaConfrontare } from './corrispondenza.ts';
+import { confronta, DOCUMENTO_NON_LEGGIBILE, espandiPreferenze, MANCA_CLASSE, MANCA_PROVINCIA, type DaConfrontare } from './corrispondenza.ts';
 
 const gruppi = new Map([['Sostegno secondaria', ['ADMM', 'ADSS']]]);
 const volute = espandiPreferenze({ classi: ['A011'], gruppi: ['Sostegno secondaria'], province: ['BA', 'BR'] }, gruppi);
@@ -28,6 +28,19 @@ test('un Interpello Da verificare passa se nulla di noto contraddice le Preferen
   assert.deepEqual(confronta(docente([], null), volute), { classiVolute: [], mancanti: [MANCA_CLASSE, MANCA_PROVINCIA] });
   assert.equal(confronta(docente([], 'LE'), volute), null);
   assert.equal(confronta(docente(['A012'], null), volute), null);
+});
+
+test('un Interpello con un documento non leggibile è Da verificare, se i campi noti non contraddicono le Preferenze', () => {
+  assert.deepEqual(confronta({ ...docente(['A011'], 'BA'), documentoNonLeggibile: true }, volute), {
+    classiVolute: ['A011'],
+    mancanti: [DOCUMENTO_NON_LEGGIBILE],
+  });
+  assert.deepEqual(confronta({ ...docente([], null), documentoNonLeggibile: true }, volute)?.mancanti, [
+    MANCA_CLASSE,
+    MANCA_PROVINCIA,
+    DOCUMENTO_NON_LEGGIBILE,
+  ]);
+  assert.equal(confronta({ ...docente(['A012'], 'BA'), documentoNonLeggibile: true }, volute), null);
 });
 
 test('un Gruppo non più configurato viene ignorato', () => {

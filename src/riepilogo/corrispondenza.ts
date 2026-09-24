@@ -5,6 +5,8 @@ import type { Preferenze } from '../preferenze.ts';
 
 export const MANCA_CLASSE = 'classe di concorso non specificata';
 export const MANCA_PROVINCIA = 'provincia non specificata';
+/** Il suo documento (o uno dei suoi) non si è potuto leggere: l'avviso potrebbe dire altro. */
+export const DOCUMENTO_NON_LEGGIBILE = 'documento non leggibile';
 
 /** Le Preferenze pronte per il confronto: Classi (Gruppi espansi) e Province. */
 export type Volute = {
@@ -27,6 +29,8 @@ export type DaConfrontare = {
   personale: Personale;
   classi: readonly string[];
   provincia: string | null;
+  /** Nessun avviso letto e un documento non leggibile: è Da verificare anche se i campi ci sono. */
+  documentoNonLeggibile?: boolean;
 };
 
 export type Corrispondenza = {
@@ -38,7 +42,7 @@ export type Corrispondenza = {
 
 /**
  * Confronta un Interpello con le Preferenze. Solo Personale docente. Un Interpello Da verificare
- * (senza Classi o senza Provincia) passa se ciò che se ne sa non contraddice le Preferenze.
+ * (senza Classi o senza Provincia, o con un documento non leggibile) passa se ciò che se ne sa non contraddice le Preferenze.
  * Restituisce null se non interessa.
  */
 export function confronta(interpello: DaConfrontare, volute: Volute): Corrispondenza | null {
@@ -51,6 +55,8 @@ export function confronta(interpello: DaConfrontare, volute: Volute): Corrispond
 
   if (interpello.provincia === null) mancanti.push(MANCA_PROVINCIA);
   else if (!volute.province.has(interpello.provincia)) return null;
+
+  if (interpello.documentoNonLeggibile) mancanti.push(DOCUMENTO_NON_LEGGIBILE);
 
   return { classiVolute, mancanti };
 }

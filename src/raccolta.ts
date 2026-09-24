@@ -1,10 +1,10 @@
 // La raccolta: legge ogni Fonte, salva le sue Pubblicazioni, ne legge i documenti e ne ricava gli Interpelli.
 // Le Fonti falliscono in isolamento: un errore su una non ferma le altre.
-import { and, asc, eq, isNotNull, max } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, max } from 'drizzle-orm';
 import type { DocumentoGrezzo, PubblicazioneGrezza } from './adapter/index.ts';
 import { schema, type Db } from './db/index.ts';
-import { pdftotext, scaricaELeggi, type LeggiPdf, type Lettura } from './documenti.ts';
-import { eAvviso, estraiDaDocumento, unisci, type Discordanza } from './estrazione/documento.ts';
+import { NON_LEGGIBILE, scaricaELeggi, type DocumentoLetto, type Lettori, type Lettura } from './documenti.ts';
+import { eAvviso, estraiDaDocumento, trovaRegioneOggetto, unisci, type Discordanza } from './estrazione/documento.ts';
 import { estraiDaIntestazione, type DatiInterpello } from './estrazione/intestazione.ts';
 import type { Luoghi } from './estrazione/luoghi.ts';
 import type { Fonte } from './fonti.ts';
@@ -21,8 +21,8 @@ export type Dipendenze = {
   http: ClientHttp;
   luoghi: Luoghi;
   adesso: Date;
-  /** Il lettore dei PDF; di norma `pdftotext`. */
-  leggiPdf?: LeggiPdf;
+  /** I lettori dei formati; di norma `pdftotext`, `tesseract` e `mammoth`. */
+  lettori?: Partial<Lettori>;
 };
 
 export type EsitoFonte =
@@ -43,12 +43,12 @@ export async function raccogli(db: Db, fonti: readonly Fonte[], dipendenze: Dipe
   return esiti;
 }
 
-export async function raccogliFonte(db: Db, fonte: Fonte, { http, luoghi, adesso, leggiPdf = pdftotext }: Dipendenze) {
+export async function raccogliFonte(db: Db, fonte: Fonte, { http, luoghi, adesso, lettori }: Dipendenze) {
   const dal = await inizioLettura(db, fonte.id, adesso);
   const lette = await fonte.lettore.leggi({ dal, http });
   const conteggio = { lette: lette.length, nuove: 0, aggiornate: 0 };
   for (const grezza of lette) {
-    const esito = await salvaPubblicazione(db, fonte.id, grezza, luoghi, { http, leggiPdf });
+    const esito = await salvaPubblicazione(db, fonte.id, grezza, luoghi, { http, lettori });
     if (esito === 'nuova') conteggio.nuove++;
     if (esito === 'aggiornata') conteggio.aggiornate++;
   }
@@ -67,13 +67,19 @@ export async function inizioLettura(db: Db, fonte: string, adesso: Date): Promis
     : new Date(adesso.getTime() - GIORNI_PRIMA_LETTURA * GIORNO);
 }
 
-/** Un documento di una Pubblicazione come è salvato: il suo testo, se è stato scaricato e letto. */
+/**
+ * Un documento di una Pubblicazione come è salvato: il suo testo, se è stato scaricato e letto. I file
+ * dentro un archivio compaiono ciascuno come documento a sé, con URL `archivio#percorso` e il percorso come etichetta.
+ */
 export type DocumentoSalvato = {
   url: string;
   etichetta: string;
+  /** Null se non è stato scaricato. */
   hash: string | null;
   testo: string | null;
   regioneOggetto: string | null;
+  /** Perché, scaricato, non si è potuto leggere. */
+  errore?: string | null;
 };
 
 /** I campi di un Interpello e da dove vengono: l'avviso letto (se c'è) e dove contraddice l'intestazione. */
@@ -81,13 +87,16 @@ export type InterpelloEstratto = DatiInterpello & {
   /** L'hash dell'avviso da cui vengono i campi del documento. */
   documento: string | null;
   documentoNonLetto: boolean;
+  /** Nessun avviso letto, e un documento scaricato non si è potuto leggere: l'avviso potrebbe essere quello. */
+  documentoNonLeggibile: boolean;
   discordanze: Discordanza[];
 };
 
 /**
- * Gli Interpelli annunciati da una Pubblicazione. Per ora uno solo: il primo avviso tra i documenti
- * letti vince sull'intestazione dove ha trovato il campo; senza un avviso letto resta la sola intestazione,
- * segnata `documentoNonLetto`. (I pacchetti con più avvisi arriveranno con ZIP e DOCX.)
+ * Gli Interpelli annunciati da una Pubblicazione: uno per avviso tra i documenti letti (PDF, file dentro
+ * gli ZIP, DOCX), nel loro ordine; moduli e allegati sono saltati. Ogni avviso vince sull'intestazione dove
+ * ha trovato il campo. Senza un avviso letto resta un Interpello dalla sola intestazione, segnato
+ * `documentoNonLetto` (e `documentoNonLeggibile` se un documento scaricato non si è potuto leggere).
  */
 export function interpelliDaPubblicazione(
   grezza: PubblicazioneGrezza,
@@ -98,18 +107,43 @@ export function interpelliDaPubblicazione(
     { intestazione: grezza.intestazione, etichetteDocumenti: grezza.documenti.map((d) => d.etichetta) },
     luoghi,
   );
+  const avvisi: InterpelloEstratto[] = [];
+  // Lo stesso avviso più volte (lo stesso file, o l'originale accanto alla copia timbrata, annotata con il
+  // protocollo o in DOCX) resta un Interpello solo: stessa Scuola e stesso testo dall'Oggetto in giù.
+  // Non basta stessa Scuola e stessa Classe: una Scuola può chiedere due supplenze uguali con date diverse.
+  const visti = new Set<string>();
+  const perAtto = new Map<string, InterpelloEstratto>();
   for (const d of documenti) {
-    if (!d.hash || !d.testo) continue;
+    if (!d.hash || !d.testo || visti.has(d.hash)) continue;
+    visti.add(d.hash);
     const dalDocumento = estraiDaDocumento({ testo: d.testo, regioneOggetto: d.regioneOggetto }, luoghi);
     if (!eAvviso(dalDocumento.oggetto, `${d.url} ${d.etichetta}`)) continue;
     const { dati, discordanze } = unisci(intestazione, dalDocumento);
-    return [{ ...dati, documento: d.hash, documentoNonLetto: false, discordanze }];
+    const regione = (d.regioneOggetto ?? trovaRegioneOggetto(d.testo) ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const atto = `${dalDocumento.codiceMeccanografico ?? dalDocumento.scuola ?? ''}|${regione}`;
+    const gemello = perAtto.get(atto);
+    if (gemello) {
+      // Una copia protocollata dice il protocollo che all'originale può mancare.
+      if (!gemello.protocollo && dalDocumento.protocollo) Object.assign(gemello, { protocollo: dati.protocollo, dataProtocollo: dati.dataProtocollo });
+      continue;
+    }
+    const avviso = { ...dati, documento: d.hash, documentoNonLetto: false, documentoNonLeggibile: false, discordanze };
+    perAtto.set(atto, avviso);
+    avvisi.push(avviso);
   }
-  return [{ ...intestazione, documento: null, documentoNonLetto: true, discordanze: [] }];
+  if (avvisi.length > 0) return avvisi;
+  const nonLeggibile = documenti.some((d) => d.hash && d.errore?.startsWith(NON_LEGGIBILE));
+  return [{ ...intestazione, documento: null, documentoNonLetto: true, documentoNonLeggibile: nonLeggibile, discordanze: [] }];
 }
 
 /** Come leggere i documenti; senza, una Pubblicazione si salva dalla sola intestazione. */
-export type LetturaDocumenti = { http: ClientHttp; leggiPdf?: LeggiPdf };
+export type LetturaDocumenti = { http: ClientHttp; lettori?: Partial<Lettori> };
+
+/**
+ * Motivi salvati prima che OCR, ZIP e DOCX si leggessero: quei documenti si riscaricano e si rileggono,
+ * perché il loro contenuto non è stato conservato.
+ */
+const LETTO_CON_REGOLE_VECCHIE = /^(formato non ancora letto|PDF senza testo)/;
 
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
 
@@ -146,15 +180,16 @@ export async function salvaPubblicazione(
   const giaScaricati = new Set<string>();
   if (esistente) {
     const righe = await db
-      .select({ url: schema.documentoPubblicazione.url })
+      .select({ url: schema.documentoPubblicazione.url, errore: schema.documento.errore })
       .from(schema.documentoPubblicazione)
+      .innerJoin(schema.documento, eq(schema.documento.hash, schema.documentoPubblicazione.hash))
       .where(and(eq(schema.documentoPubblicazione.pubblicazioneId, esistente.id), isNotNull(schema.documentoPubblicazione.hash)));
-    for (const { url } of righe) giaScaricati.add(url);
+    for (const { url, errore } of righe) if (!errore || !LETTO_CON_REGOLE_VECCHIE.test(errore)) giaScaricati.add(url);
   }
   const letture: Lettura[] = [];
   if (lettura) {
     for (const { url } of grezza.documenti) {
-      if (!giaScaricati.has(url)) letture.push(await scaricaELeggi(url, lettura.http, lettura.leggiPdf));
+      if (!giaScaricati.has(url)) letture.push(await scaricaELeggi(url, lettura.http, lettura.lettori));
     }
   }
   if (invariata && !letture.some((l) => 'letto' in l)) return 'invariata';
@@ -185,7 +220,7 @@ export async function salvaPubblicazione(
 async function salvaDocumenti(tx: Tx, pubblicazioneId: number, grezza: PubblicazioneGrezza, letture: readonly Lettura[], ora: Date) {
   const posizioni = new Map(grezza.documenti.map((d, i) => [d.url, i]));
   for (const l of letture) {
-    if ('letto' in l) await tx.insert(schema.documento).values(l.letto).onConflictDoNothing({ target: schema.documento.hash });
+    if ('letto' in l) await salvaDocumento(tx, l.letto);
     const riga = {
       posizione: posizioni.get(l.url)!,
       hash: 'letto' in l ? l.letto.hash : null,
@@ -210,7 +245,23 @@ async function salvaDocumenti(tx: Tx, pubblicazioneId: number, grezza: Pubblicaz
   }
 }
 
-/** I documenti salvati di una Pubblicazione, nel suo ordine, con il loro testo. */
+/**
+ * Salva un documento letto, una volta sola per hash, e le sue parti se è un archivio. Un documento già
+ * salvato prende la lettura nuova: lo stesso contenuto, letto con le regole di oggi.
+ */
+async function salvaDocumento(tx: Tx, { parti, ...letto }: DocumentoLetto) {
+  const { testo, regioneOggetto, errore } = letto;
+  await tx.insert(schema.documento).values(letto).onConflictDoUpdate({ target: schema.documento.hash, set: { testo, regioneOggetto, errore } });
+  for (const [posizione, { nome, letto: parte }] of (parti ?? []).entries()) {
+    await salvaDocumento(tx, parte);
+    await tx
+      .insert(schema.documentoParte)
+      .values({ archivio: letto.hash, posizione, nome, parte: parte.hash })
+      .onConflictDoUpdate({ target: [schema.documentoParte.archivio, schema.documentoParte.posizione], set: { nome, parte: parte.hash } });
+  }
+}
+
+/** I documenti salvati di una Pubblicazione, nel suo ordine, con il loro testo; un archivio al posto delle sue parti. */
 async function documentiSalvati(tx: Tx, pubblicazioneId: number, grezza: PubblicazioneGrezza): Promise<DocumentoSalvato[]> {
   const etichette = new Map(grezza.documenti.map((d) => [d.url, d.etichetta]));
   const righe = await tx
@@ -219,12 +270,36 @@ async function documentiSalvati(tx: Tx, pubblicazioneId: number, grezza: Pubblic
       hash: schema.documentoPubblicazione.hash,
       testo: schema.documento.testo,
       regioneOggetto: schema.documento.regioneOggetto,
+      errore: schema.documento.errore,
     })
     .from(schema.documentoPubblicazione)
     .leftJoin(schema.documento, eq(schema.documento.hash, schema.documentoPubblicazione.hash))
     .where(eq(schema.documentoPubblicazione.pubblicazioneId, pubblicazioneId))
     .orderBy(asc(schema.documentoPubblicazione.posizione));
-  return righe.map((r) => ({ ...r, etichetta: etichette.get(r.url) ?? '' }));
+
+  const hash = righe.flatMap((r) => (r.hash ? [r.hash] : []));
+  const parti =
+    hash.length === 0
+      ? []
+      : await tx
+          .select({
+            archivio: schema.documentoParte.archivio,
+            nome: schema.documentoParte.nome,
+            hash: schema.documento.hash,
+            testo: schema.documento.testo,
+            regioneOggetto: schema.documento.regioneOggetto,
+            errore: schema.documento.errore,
+          })
+          .from(schema.documentoParte)
+          .innerJoin(schema.documento, eq(schema.documento.hash, schema.documentoParte.parte))
+          .where(inArray(schema.documentoParte.archivio, hash))
+          .orderBy(asc(schema.documentoParte.archivio), asc(schema.documentoParte.posizione));
+
+  return righe.flatMap((r) => {
+    const contenute = parti.filter((p) => p.archivio === r.hash);
+    if (contenute.length === 0) return [{ ...r, etichetta: etichette.get(r.url) ?? '' }];
+    return contenute.map(({ archivio: _, nome, ...p }) => ({ ...p, url: `${r.url}#${nome}`, etichetta: nome }));
+  });
 }
 
 /**

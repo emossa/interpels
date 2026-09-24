@@ -17,8 +17,9 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-      # pdftotext (poppler) legge il testo dei PDF; i test lo usano sui PDF di esempio in fixtures/documenti/.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+      # poppler (pdftotext, pdftoppm) legge i PDF, tesseract con il modello italiano le scansioni;
+      # i test li usano sui documenti di esempio in fixtures/documenti/.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-ita
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test

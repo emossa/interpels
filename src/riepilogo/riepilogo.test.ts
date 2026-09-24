@@ -92,14 +92,19 @@ test('entra solo ciò la cui prima Pubblicazione è al più 3 giorni prima che i
 test('Da verificare va in fondo, a parte, con ciò che manca', () => {
   const contenuto = componi(
     destinatario,
-    [candidato({ provincia: null, comune: null }), candidato({ classi: [] }), candidato({ classi: [], provincia: 'LE' })],
+    [
+      candidato({ provincia: null, comune: null }),
+      candidato({ classi: [] }),
+      candidato({ classi: [], provincia: 'LE' }),
+      candidato({ documentoNonLeggibile: true }),
+    ],
     new Set(),
     contesto,
   )!;
   assert.deepEqual(contenuto.gruppi, []);
   assert.deepEqual(
     contenuto.daVerificare.map((v) => v.mancanti),
-    [['provincia non specificata'], ['classe di concorso non specificata']],
+    [['provincia non specificata'], ['classe di concorso non specificata'], ['documento non leggibile']],
   );
 });
 

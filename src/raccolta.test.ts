@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { eq } from 'drizzle-orm';
+import { eq, ne } from 'drizzle-orm';
+import { zipSync } from 'fflate';
 import type { Lettura, PubblicazioneGrezza } from './adapter/index.ts';
 import { RADICE_PROGETTO } from './config.ts';
 import { schema, type Db } from './db/index.ts';
@@ -11,7 +12,7 @@ import { hashDi } from './documenti.ts';
 import { caricaLuoghi } from './estrazione/luoghi.ts';
 import type { Fonte } from './fonti.ts';
 import { creaClientHttp } from './http.ts';
-import { GIORNI_PRIMA_LETTURA, GIORNI_RILETTURA, raccogli, rileggi } from './raccolta.ts';
+import { GIORNI_PRIMA_LETTURA, GIORNI_RILETTURA, interpelliDaPubblicazione, raccogli, rileggi, type DocumentoSalvato } from './raccolta.ts';
 
 const luoghi = caricaLuoghi();
 const http = creaClientHttp({ fetch: (() => Promise.reject(new Error('niente rete nei test'))) as typeof fetch, tentativi: 1, dormi: async () => {} });
@@ -102,6 +103,7 @@ test('salva le Pubblicazioni e un Interpello per ciascuna, con i campi dall\'int
       // Qui la rete non c'è: il documento non si scarica e restano i campi dell'intestazione.
       documento: null,
       documentoNonLetto: true,
+      documentoNonLeggibile: false,
       discordanze: [],
       creatoIl: null,
       aggiornatoIl: null,
@@ -188,15 +190,20 @@ test('la stessa chiave su Fonti diverse sono Pubblicazioni diverse', async (t) =
 
 const cartellaDocumenti = join(RADICE_PROGETTO, 'fixtures', 'documenti');
 
-/** Un ClientHttp che serve i PDF di esempio per URL (o uno stato d'errore) e ricorda cosa gli si chiede. */
-function clientDocumenti(documenti: Record<string, string | number>) {
+/**
+ * Un ClientHttp che serve per URL i documenti di esempio (per nome), contenuti costruiti nel test o uno
+ * stato d'errore, e ricorda cosa gli si chiede.
+ */
+function clientDocumenti(documenti: Record<string, string | number | Uint8Array>) {
   const richiesti: string[] = [];
   const fetch = (async (input: string | URL | Request) => {
     const url = String(input);
     richiesti.push(url);
     const documento = documenti[url] ?? 404;
     if (typeof documento === 'number') return new Response('errore', { status: documento });
-    return new Response(readFileSync(join(cartellaDocumenti, documento)), { status: 200, headers: { 'content-type': 'application/pdf' } });
+    const corpo = typeof documento === 'string' ? readFileSync(join(cartellaDocumenti, documento)) : documento;
+    const tipo = url.endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream';
+    return new Response(corpo, { status: 200, headers: { 'content-type': tipo } });
   }) as typeof globalThis.fetch;
   return { http: creaClientHttp({ fetch, tentativi: 1, dormi: async () => {} }), richiesti };
 }
@@ -346,4 +353,200 @@ test('rileggi ricava di nuovo gli Interpelli dal testo salvato, senza riscaricar
   assert.deepEqual([interpello.classi, interpello.comune, interpello.discordanze.length], [['ADEE'], 'Noicattaro', 3]);
   assert.equal((await interpelloDi(db, '102')).comune, 'Monopoli');
   assert.equal((await db.select().from(schema.interpello)).length, 2);
+});
+
+// --- Pacchetti: più avvisi in una Pubblicazione, come più PDF o dentro uno ZIP.
+
+/** Gli Interpelli di una Pubblicazione, nell'ordine in cui sono stati creati, con i campi che li distinguono. */
+async function interpelliDi(db: Db, chiave: string) {
+  const righe = await db
+    .select({ interpello: schema.interpello })
+    .from(schema.pubblicazioneInterpello)
+    .innerJoin(schema.pubblicazione, eq(schema.pubblicazione.id, schema.pubblicazioneInterpello.pubblicazioneId))
+    .innerJoin(schema.interpello, eq(schema.interpello.id, schema.pubblicazioneInterpello.interpelloId))
+    .where(eq(schema.pubblicazione.chiave, chiave))
+    .orderBy(schema.interpello.id);
+  return righe.map(({ interpello: i }) => ({
+    documento: i.documento,
+    classi: i.classi,
+    codice: i.codiceMeccanografico,
+    comune: i.comune,
+    provincia: i.provincia,
+    protocollo: i.protocollo,
+    nonLetto: i.documentoNonLetto,
+    nonLeggibile: i.documentoNonLeggibile,
+  }));
+}
+
+const avvisoNoicattaro = {
+  documento: hashDelCampione('noicattaro-adee.pdf'),
+  classi: ['ADEE'],
+  codice: 'BAIC89800T',
+  comune: 'Noicattaro',
+  provincia: 'BA',
+  protocollo: '8494',
+  nonLetto: false,
+  nonLeggibile: false,
+};
+const avvisoRuvo = (documento: string) => ({
+  documento,
+  classi: ['B002', 'BI02'],
+  codice: 'BAPS09000R',
+  comune: 'Ruvo di Puglia',
+  provincia: 'BA',
+  // La segnatura di protocollo di Ruvo non ha la forma "Prot.": qui non si legge (né dal testo né dall'OCR).
+  protocollo: null,
+  nonLetto: false,
+  nonLeggibile: false,
+});
+const avvisoBrindisi = {
+  documento: hashDelCampione('brindisi-a011.docx'),
+  classi: ['A011'],
+  codice: 'BRIC81000X',
+  comune: 'Brindisi',
+  provincia: 'BR',
+  protocollo: '1234',
+  nonLetto: false,
+  nonLeggibile: false,
+};
+
+const pacchetto: PubblicazioneGrezza = {
+  chiave: '301',
+  url: 'https://x.it/301',
+  intestazione: 'Interpelli nazionali del 24 settembre',
+  pubblicataIl: new Date('2026-09-24T08:00:00Z'),
+  documenti: [],
+};
+
+test('un post con più PDF dà un Interpello per avviso, tutti legati alla stessa Pubblicazione; i moduli sono saltati e le scansioni lette con OCR', async (t) => {
+  const db = await dbDiTest(t);
+  const { http } = clientDocumenti({
+    'https://x.it/noicattaro.pdf': 'noicattaro-adee.pdf',
+    'https://x.it/modello-domanda.pdf': 'altamura-modello-domanda.pdf',
+    'https://x.it/ruvo-scansione.pdf': 'ruvo-b002-scansione.pdf',
+  });
+  const conPiuPdf = {
+    ...pacchetto,
+    documenti: [
+      { url: 'https://x.it/noicattaro.pdf', etichetta: 'Interpello Noicattaro' },
+      { url: 'https://x.it/modello-domanda.pdf', etichetta: 'Modello di domanda' },
+      { url: 'https://x.it/ruvo-scansione.pdf', etichetta: 'Interpello Ruvo' },
+    ],
+  };
+  await raccogli(db, [fonteFinta('prova', () => [conPiuPdf]).fonte], { http, luoghi, adesso });
+
+  assert.deepEqual(await interpelliDi(db, '301'), [avvisoNoicattaro, avvisoRuvo(hashDelCampione('ruvo-b002-scansione.pdf'))]);
+  assert.equal((await db.select().from(schema.pubblicazione)).length, 1);
+  assert.equal((await db.select().from(schema.interpello)).length, 2);
+});
+
+test('uno ZIP con più avvisi dà un Interpello per avviso; allegati e moduli sono saltati; si rilegge senza riscaricare', async (t) => {
+  const db = await dbDiTest(t);
+  const leggi = (nome: string) => readFileSync(join(cartellaDocumenti, nome));
+  const zip = zipSync({
+    'Interpelli/Allegato_1_modello_domanda.pdf': leggi('altamura-modello-domanda.pdf'),
+    'Interpelli/noicattaro.pdf': leggi('noicattaro-adee.pdf'),
+    'Interpelli/brindisi.docx': leggi('brindisi-a011.docx'),
+    'Interpelli/altri.zip': zipSync({ 'ruvo.pdf': leggi('ruvo-b002.pdf') }),
+  });
+  const { http, richiesti } = clientDocumenti({ 'https://x.it/interpelli.zip': zip });
+  const conZip = { ...pacchetto, documenti: [{ url: 'https://x.it/interpelli.zip', etichetta: 'Interpelli (zip)' }] };
+  await raccogli(db, [fonteFinta('prova', () => [conZip]).fonte], { http, luoghi, adesso });
+
+  const attesi = [avvisoNoicattaro, avvisoBrindisi, avvisoRuvo(hashDelCampione('ruvo-b002.pdf'))];
+  assert.deepEqual(await interpelliDi(db, '301'), attesi);
+
+  // Lo ZIP è un documento (senza testo) e le sue parti documenti a sé, nel loro ordine.
+  const [archivio] = await db.select().from(schema.documento).where(eq(schema.documento.hash, hashDi(zip)));
+  assert.deepEqual([archivio!.testo, archivio!.errore], [null, null]);
+  const parti = await db.select().from(schema.documentoParte).orderBy(schema.documentoParte.posizione);
+  assert.deepEqual(
+    parti.map((p) => [p.archivio === hashDi(zip), p.posizione, p.nome]),
+    [
+      [true, 0, 'Interpelli/Allegato_1_modello_domanda.pdf'],
+      [true, 1, 'Interpelli/noicattaro.pdf'],
+      [true, 2, 'Interpelli/brindisi.docx'],
+      [true, 3, 'Interpelli/altri.zip/ruvo.pdf'],
+    ],
+  );
+
+  const scaricati = richiesti.length;
+  await db.update(schema.interpello).set({ classi: [], comune: null });
+  await rileggi(db, luoghi);
+  assert.equal(richiesti.length, scaricati);
+  assert.deepEqual(await interpelliDi(db, '301'), attesi);
+});
+
+test("l'originale e la sua copia timbrata sono un avviso solo; due supplenze uguali con date diverse sono due", () => {
+  const avviso = (fino: string) =>
+    [
+      'ISTITUTO COMPRENSIVO "ROSSI"',
+      'Via Roma, 1 - 70022 Altamura (BA) - BAIC81200X',
+      'Al sito',
+      '',
+      'OGGETTO: Interpello per supplenza ADMM',
+      'IL DIRIGENTE',
+      `Vista la necessità di una supplenza fino al ${fino};`,
+    ].join('\n');
+  const documento = (nome: string, testo: string): DocumentoSalvato => ({
+    url: `https://x.it/p.zip#${nome}`,
+    etichetta: nome,
+    hash: hashDi(new TextEncoder().encode(testo)),
+    testo,
+    regioneOggetto: null,
+  });
+  const interpelli = interpelliDaPubblicazione(pacchetto, luoghi, [
+    documento('avviso.pdf', avviso('21/10/2026')),
+    documento('timbro_avviso-signed.pdf', `Protocollo 0006976/2026 del 23/09/2026\n${avviso('21/10/2026')}`),
+    documento('avviso-2.pdf', avviso('15/10/2026')),
+  ]);
+  assert.deepEqual(
+    interpelli.map((i) => [i.documento, i.codiceMeccanografico, i.classi, i.protocollo, i.dataProtocollo]),
+    [
+      [hashDi(new TextEncoder().encode(avviso('21/10/2026'))), 'BAIC81200X', ['ADMM'], '6976', '23/09/2026'],
+      [hashDi(new TextEncoder().encode(avviso('15/10/2026'))), 'BAIC81200X', ['ADMM'], null, null],
+    ],
+  );
+});
+
+test('un 7z non si apre: un Interpello dalla sola intestazione, segnato documento non leggibile', async (t) => {
+  const db = await dbDiTest(t);
+  const settezip = new Uint8Array([0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c, 0, 4, 1, 2, 3]);
+  const { http } = clientDocumenti({ 'https://x.it/interpelli.7z': settezip });
+  const con7z = { ...docente, documenti: [{ url: 'https://x.it/interpelli.7z', etichetta: 'Interpello (7z)' }] };
+  await raccogli(db, [fonteFinta('prova', () => [con7z]).fonte], { http, luoghi, adesso });
+
+  const [documento] = await db.select().from(schema.documento);
+  assert.deepEqual([documento!.hash, documento!.testo, documento!.errore], [hashDi(settezip), null, 'documento non leggibile: 7z']);
+  assert.deepEqual(await interpelliDi(db, '101'), [
+    { documento: null, classi: ['ADMM'], codice: null, comune: 'Altamura', provincia: 'BA', protocollo: null, nonLetto: true, nonLeggibile: true },
+  ]);
+});
+
+test('un documento salvato prima che ZIP e DOCX si leggessero si riscarica e dà i suoi avvisi, aggiornando l\'Interpello che c\'era', async (t) => {
+  const db = await dbDiTest(t);
+  const leggi = (nome: string) => readFileSync(join(cartellaDocumenti, nome));
+  const zip = zipSync({ 'noicattaro.pdf': leggi('noicattaro-adee.pdf'), 'brindisi.docx': leggi('brindisi-a011.docx') });
+  const { http, richiesti } = clientDocumenti({ 'https://x.it/interpelli.zip': zip });
+  const conZip = { ...pacchetto, documenti: [{ url: 'https://x.it/interpelli.zip', etichetta: 'Interpelli (zip)' }] };
+  const { fonte } = fonteFinta('prova', () => [conZip]);
+  await raccogli(db, [fonte], { http, luoghi, adesso });
+  // Com'era salvato prima: lo ZIP con un motivo e senza parti, un Interpello solo dall'intestazione.
+  const [primo] = await db.select({ id: schema.interpello.id }).from(schema.interpello).orderBy(schema.interpello.id);
+  await db.delete(schema.documentoParte);
+  await db.update(schema.documento).set({ errore: 'formato non ancora letto: zip (o docx/odt)' }).where(eq(schema.documento.hash, hashDi(zip)));
+  await db.delete(schema.pubblicazioneInterpello).where(ne(schema.pubblicazioneInterpello.interpelloId, primo!.id));
+  await db.update(schema.interpello).set({ documento: null, documentoNonLetto: true }).where(eq(schema.interpello.id, primo!.id));
+
+  assert.deepEqual(await raccogli(db, [fonte], { http, luoghi, adesso }), [{ fonte: 'prova', lette: 1, nuove: 0, aggiornate: 1 }]);
+  assert.equal(richiesti.length, 2);
+  const [archivio] = await db.select().from(schema.documento).where(eq(schema.documento.hash, hashDi(zip)));
+  assert.equal(archivio!.errore, null);
+  assert.deepEqual(await interpelliDi(db, '301'), [avvisoNoicattaro, avvisoBrindisi]);
+  const [aggiornato] = await db.select({ id: schema.pubblicazioneInterpello.interpelloId }).from(schema.pubblicazioneInterpello).orderBy(schema.pubblicazioneInterpello.interpelloId);
+  assert.equal(aggiornato!.id, primo!.id);
+
+  // Ora è letto: non si riscarica più.
+  await raccogli(db, [fonte], { http, luoghi, adesso });
+  assert.equal(richiesti.length, 2);
 });

@@ -57,7 +57,7 @@ The school issuing an Interpello, identified by its codice meccanografico (e.g. 
 _Avoid_: institute, istituto, school
 
 **Da verificare**:
-An Interpello whose Classe di concorso or Provincia could not be determined. Reaches a Destinatario when nothing known contradicts their Preferenze, marked with what is missing (e.g. "classe di concorso non specificata").
+An Interpello whose Classe di concorso or Provincia could not be determined, or whose document could not be read ("documento non leggibile"). Reaches a Destinatario when nothing known contradicts their Preferenze, marked with what is missing (e.g. "classe di concorso non specificata").
 _Avoid_: unresolved, unknown, incomplete
 
 ### Recipients

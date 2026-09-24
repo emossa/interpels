@@ -26,6 +26,8 @@ export type Candidato = {
   scuola: string | null;
   comune: string | null;
   provincia: string | null;
+  /** Nessun avviso letto e un documento non leggibile: va tra i Da verificare. */
+  documentoNonLeggibile?: boolean;
   ore: number | null;
   finoAl: string | null;
   /** La scadenza per candidarsi, quando è nota. */

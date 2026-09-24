@@ -18,6 +18,7 @@ test('le migrazioni si applicano su PGlite e creano le tabelle', async (t) => {
       'avviso',
       'destinatario',
       'documento',
+      'documento_parte',
       'documento_pubblicazione',
       'interpello',
       'invio',

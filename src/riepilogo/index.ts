@@ -87,6 +87,7 @@ export async function caricaCandidati(db: Db, dal: Date, nomiFonti: ReadonlyMap<
         scuola: i.scuola,
         comune: i.comune,
         provincia: i.provincia,
+        documentoNonLeggibile: i.documentoNonLeggibile,
         ore: i.ore,
         finoAl: i.finoAl,
         // La scadenza non si estrae ancora: arriverà con la lettura dei documenti.
