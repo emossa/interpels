@@ -7,7 +7,7 @@ import type { GenerePreferenza } from './db/schema.ts';
 import { normalizzaEmail } from './normalizza.ts';
 import { ErroreValidazione, type Preferenze, validaPreferenze } from './preferenze.ts';
 
-const { destinatario, preferenza } = schema;
+const { destinatario, preferenza, riepilogo } = schema;
 
 export type Destinatario = {
   id: number;
@@ -98,6 +98,20 @@ export async function disattivaDestinatario(db: Db, email: string, adesso: Date 
     .set({ attivo: false, disattivatoIl: adesso })
     .where(eq(destinatario.id, attuale.id));
   return leggi(db, attuale.id);
+}
+
+/**
+ * Dimentica i Riepiloghi già inviati al Destinatario (e, a cascata, i suoi `invio`): il prossimo job
+ * gli manda di nuovo un primo Riepilogo, con ogni Interpello aperto che corrisponde alle Preferenze,
+ * anche se già ricevuto. Restituisce quanti Riepiloghi ha dimenticato.
+ */
+export async function ricominciaDestinatario(db: Db, email: string): Promise<{ destinatario: Destinatario; riepiloghi: number }> {
+  const attuale = await trova(db, email);
+  const cancellati = await db
+    .delete(riepilogo)
+    .where(eq(riepilogo.destinatarioId, attuale.id))
+    .returning({ id: riepilogo.id });
+  return { destinatario: attuale, riepiloghi: cancellati.length };
 }
 
 // Una transazione espone le stesse query del database.

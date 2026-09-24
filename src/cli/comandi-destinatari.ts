@@ -9,6 +9,7 @@ import {
   disattivaDestinatario,
   elencaDestinatari,
   modificaDestinatario,
+  ricominciaDestinatario,
 } from '../destinatari.ts';
 import { ErroreValidazione } from '../preferenze.ts';
 
@@ -17,12 +18,15 @@ export const USO = `Uso:
   pnpm destinatari elenco
   pnpm destinatari modifica <email> [--email <nuova>] [--classi ...] [--gruppi ...] [--province ...] [--[no-]separa-province]
   pnpm destinatari disattiva <email>
+  pnpm destinatari ricomincia <email>
 
 Le opzioni accettano valori separati da virgola o ripetuti. In "modifica" sostituiscono
 i valori attuali (un valore vuoto, es. --gruppi "", li svuota); quelle omesse restano come sono.
 Serve almeno una Classe di concorso o un Gruppo di classi, e almeno una Provincia.
 --separa-province invia un Riepilogo per Provincia allo stesso indirizzo invece di uno solo;
---no-separa-province torna a uno solo.`;
+--no-separa-province torna a uno solo.
+"ricomincia" dimentica i Riepiloghi già inviati: il prossimo job manda di nuovo un primo Riepilogo,
+con ogni Interpello aperto per le Preferenze attuali, anche se già ricevuto.`;
 
 export type Ambiente = {
   db: Db;
@@ -81,6 +85,14 @@ async function esegui(argv: readonly string[], { db, configurazione, scrivi }: A
       const { email } = leggiArgomenti(resto, { email: true });
       const disattivato = await disattivaDestinatario(db, email);
       scrivi(`Disattivato ${descrivi(disattivato)}`);
+      return;
+    }
+    case 'ricomincia': {
+      const { email } = leggiArgomenti(resto, { email: true });
+      const { destinatario, riepiloghi } = await ricominciaDestinatario(db, email);
+      scrivi(
+        `Ricominciato ${destinatario.email}: ${riepiloghi} ${riepiloghi === 1 ? 'Riepilogo dimenticato' : 'Riepiloghi dimenticati'}, il prossimo job invia un nuovo primo Riepilogo.`,
+      );
       return;
     }
     default:

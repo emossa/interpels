@@ -39,6 +39,7 @@ pnpm destinatari aggiungi <email> --classi A011,AM12,AS12 --gruppi "Sostegno sec
 pnpm destinatari elenco
 pnpm destinatari modifica <email> [--email <nuova>] [--classi …] [--gruppi …] [--province …] [--[no-]separa-province]
 pnpm destinatari disattiva <email>
+pnpm destinatari ricomincia <email>   # dimentica i Riepiloghi inviati: il prossimo job manda un nuovo primo Riepilogo
 ```
 
 Classi are normalised (`A11`, `A-11` → `A011`), Gruppi and Province must exist in configuration, and each Destinatario needs at least one Classe or Gruppo and at least one Provincia. Emails are unique regardless of case. Gruppi are stored by name and expanded only when matching. `disattiva` sets `attivo = false` with a timestamp; nothing is ever deleted.

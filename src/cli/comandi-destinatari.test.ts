@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { caricaConfigurazione } from '../config.ts';
+import { schema } from '../db/index.ts';
 import { creaDbDiTest } from '../db/test-db.ts';
 import { elencaDestinatari } from '../destinatari.ts';
 import { eseguiDestinatari } from './comandi-destinatari.ts';
@@ -132,4 +133,22 @@ test('--separa-province chiede un Riepilogo per Provincia; modifica --no-separa-
   assert.equal((await esegui('aggiungi', 'q@example.org', '--classi', 'A011', '--province', 'BA')).codice, 0);
   assert.equal((await elencaDestinatari(db)).find((d) => d.email === 'q@example.org')?.separaProvince, false);
   assert.equal((await esegui('elenco')).uscita.match(/Un Riepilogo per Provincia/g)?.length, 1);
+});
+
+test('ricomincia dimentica i Riepiloghi inviati, così il prossimo job manda un nuovo primo Riepilogo', async (t) => {
+  const { db, esegui } = await preparaCli(t);
+  await esegui('aggiungi', 'persona@example.org', '--classi', 'A011', '--province', 'BA');
+  const [salvato] = await elencaDestinatari(db);
+  await db.insert(schema.riepilogo).values([
+    { destinatarioId: salvato!.id, giorno: '2026-09-23' },
+    { destinatarioId: salvato!.id, giorno: '2026-09-24' },
+  ]);
+
+  const risultato = await esegui('ricomincia', 'Persona@Example.org');
+  assert.equal(risultato.codice, 0, risultato.errori);
+  assert.match(risultato.uscita, /Ricominciato persona@example\.org: 2 Riepiloghi dimenticati/);
+  assert.equal((await db.select().from(schema.riepilogo)).length, 0);
+  assert.equal((await elencaDestinatari(db)).length, 1, 'il Destinatario resta');
+
+  assert.equal((await esegui('ricomincia', 'nessuno@example.org')).codice, 1);
 });
