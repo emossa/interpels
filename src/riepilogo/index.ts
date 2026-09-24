@@ -1,5 +1,5 @@
 // Dai dati salvati ai Riepiloghi: per ogni Destinatario attivo, cosa ha di nuovo e il messaggio da inviare.
-import { eq, gte, inArray, min, or } from 'drizzle-orm';
+import { eq, gte, inArray, min, or, sql } from 'drizzle-orm';
 import type { Configurazione } from '../config.ts';
 import { schema, type Db } from '../db/index.ts';
 import { elencaDestinatari } from '../destinatari.ts';
@@ -66,7 +66,8 @@ export async function caricaCandidati(db: Db, dal: Date, nomiFonti: ReadonlyMap<
     .from(pubblicazioneInterpello)
     .innerJoin(pubblicazione, eq(pubblicazione.id, pubblicazioneInterpello.pubblicazioneId))
     .groupBy(pubblicazioneInterpello.interpelloId)
-    .having(gte(min(pubblicazione.pubblicataIl), dal));
+    // Confrontata con min(…) e non con una colonna, la Date non passa dal mapping di Drizzle: postgres.js la rifiuterebbe.
+    .having(gte(min(pubblicazione.pubblicataIl), sql`${dal.toISOString()}::timestamptz`));
   const righe = await db
     .select({ i: interpello, p: pubblicazione })
     .from(interpello)
